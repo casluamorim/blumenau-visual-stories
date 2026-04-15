@@ -84,7 +84,7 @@ export default function Contents() {
                   <div className="flex items-center gap-2 shrink-0">
                     <Badge variant="outline" className="text-xs">{typeLabels[content.type] ?? content.type}</Badge>
                     <Badge variant="outline" className={status.color}>{status.label}</Badge>
-                    {revisionWarning && <AlertTriangle className="h-4 w-4 text-amber-400" title="Limite de revisões" />}
+                    {revisionWarning && <AlertTriangle className="h-4 w-4 text-amber-400" />}
                     <Link to={`/projects/${content.project_id}`}>
                       <Button variant="ghost" size="icon" className="h-8 w-8"><ArrowRight className="h-4 w-4" /></Button>
                     </Link>
