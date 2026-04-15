@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Search, Mail, Phone, Building2, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Mail, Phone, Building2, MoreHorizontal, Edit, Trash2, Link2, Copy, Check } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -23,6 +24,8 @@ export default function Clients() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const [form, setForm] = useState<ClientInsert>({
     name: '', company: '', email: '', phone: '', status: 'active', notes: '',
@@ -70,6 +73,39 @@ export default function Clients() {
     setEditingClient(client);
     setForm({ name: client.name, company: client.company, email: client.email, phone: client.phone, status: client.status, notes: client.notes });
     setDialogOpen(true);
+  }
+
+  async function generatePortalLink(clientId: string) {
+    // Check if token already exists
+    const { data: existing } = await supabase
+      .from('client_access_tokens')
+      .select('token')
+      .eq('client_id', clientId)
+      .eq('is_active', true)
+      .limit(1)
+      .single();
+
+    let token = existing?.token;
+
+    if (!token) {
+      const { data: newToken, error } = await supabase
+        .from('client_access_tokens')
+        .insert({ client_id: clientId, created_by: user?.id })
+        .select('token')
+        .single();
+
+      if (error) {
+        toast({ title: 'Erro ao gerar link', description: error.message, variant: 'destructive' });
+        return;
+      }
+      token = newToken?.token;
+    }
+
+    const url = `${window.location.origin}/portal/${token}`;
+    await navigator.clipboard.writeText(url);
+    setCopiedId(clientId);
+    setTimeout(() => setCopiedId(null), 2000);
+    toast({ title: 'Link copiado!', description: 'Envie para o cliente acessar o portal.' });
   }
 
   const filtered = clients.filter(c =>
@@ -153,6 +189,10 @@ export default function Clients() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => generatePortalLink(client.id)}>
+                      {copiedId === client.id ? <Check className="mr-2 h-4 w-4" /> : <Link2 className="mr-2 h-4 w-4" />}
+                      {copiedId === client.id ? 'Link copiado!' : 'Link do Portal'}
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => openEdit(client)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleDelete(client.id)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
                   </DropdownMenuContent>
