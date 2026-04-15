@@ -189,6 +189,10 @@ export default function Clients() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => generatePortalLink(client.id)}>
+                      {copiedId === client.id ? <Check className="mr-2 h-4 w-4" /> : <Link2 className="mr-2 h-4 w-4" />}
+                      {copiedId === client.id ? 'Link copiado!' : 'Link do Portal'}
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => openEdit(client)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleDelete(client.id)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
                   </DropdownMenuContent>
