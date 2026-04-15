@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import {
   FileText, CheckCircle, XCircle, Clock, MessageSquare,
-  FolderKanban, Send, AlertTriangle, Building2
+  FolderKanban, Send, AlertTriangle, Building2, DollarSign
 } from 'lucide-react';
 
 const contentStatusConfig: Record<string, { label: string; color: string; icon: any }> = {
