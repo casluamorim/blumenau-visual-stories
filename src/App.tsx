@@ -11,6 +11,7 @@ import ProjectDetail from "./pages/ProjectDetail";
 import Contents from "./pages/Contents";
 import TagsPage from "./pages/TagsPage";
 import ActivityPage from "./pages/ActivityPage";
+import ClientPortal from "./pages/ClientPortal";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -49,9 +50,16 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
+        <Routes>
+          {/* Public portal route - no auth required */}
+          <Route path="/portal/:token" element={<ClientPortal />} />
+          {/* All other routes require auth */}
+          <Route path="/*" element={
+            <AuthProvider>
+              <AppRoutes />
+            </AuthProvider>
+          } />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
