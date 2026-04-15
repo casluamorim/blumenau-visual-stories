@@ -75,6 +75,39 @@ export default function Clients() {
     setDialogOpen(true);
   }
 
+  async function generatePortalLink(clientId: string) {
+    // Check if token already exists
+    const { data: existing } = await supabase
+      .from('client_access_tokens')
+      .select('token')
+      .eq('client_id', clientId)
+      .eq('is_active', true)
+      .limit(1)
+      .single();
+
+    let token = existing?.token;
+
+    if (!token) {
+      const { data: newToken, error } = await supabase
+        .from('client_access_tokens')
+        .insert({ client_id: clientId, created_by: user?.id })
+        .select('token')
+        .single();
+
+      if (error) {
+        toast({ title: 'Erro ao gerar link', description: error.message, variant: 'destructive' });
+        return;
+      }
+      token = newToken?.token;
+    }
+
+    const url = `${window.location.origin}/portal/${token}`;
+    await navigator.clipboard.writeText(url);
+    setCopiedId(clientId);
+    setTimeout(() => setCopiedId(null), 2000);
+    toast({ title: 'Link copiado!', description: 'Envie para o cliente acessar o portal.' });
+  }
+
   const filtered = clients.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     c.company?.toLowerCase().includes(search.toLowerCase()) ||
