@@ -367,6 +367,42 @@ export default function ClientPortal() {
               </Card>
             )}
           </TabsContent>
+
+          {/* Invoices Tab */}
+          <TabsContent value="invoices" className="space-y-3">
+            {invoicesData.length === 0 ? (
+              <Card className="border-slate-200 bg-white">
+                <CardContent className="p-8 text-center text-slate-500">
+                  Nenhuma fatura disponível.
+                </CardContent>
+              </Card>
+            ) : (
+              invoicesData.map((inv: any) => {
+                const statusMap: Record<string, { label: string; color: string }> = {
+                  pending: { label: 'Pendente', color: 'bg-amber-50 text-amber-600 border-amber-200' },
+                  paid: { label: 'Pago', color: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
+                  overdue: { label: 'Atrasado', color: 'bg-red-50 text-red-600 border-red-200' },
+                  cancelled: { label: 'Cancelado', color: 'bg-slate-100 text-slate-500 border-slate-200' },
+                };
+                const st = statusMap[inv.status] ?? statusMap.pending;
+                return (
+                  <Card key={inv.id} className="border-slate-200 bg-white hover:shadow-sm transition-shadow">
+                    <CardContent className="flex items-center gap-4 p-4">
+                      <DollarSign className="h-5 w-5 text-violet-500 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-slate-800 truncate">{inv.title}</p>
+                        <p className="text-sm text-slate-500">
+                          Vencimento: {new Date(inv.due_date).toLocaleDateString('pt-BR')} •{' '}
+                          {Number(inv.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className={st.color}>{st.label}</Badge>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            )}
+          </TabsContent>
         </Tabs>
       </main>
 
