@@ -180,7 +180,7 @@ export default function Financial() {
     const payload = {
       client_id: iClientId, quote_id: iQuoteId || null, title: iTitle,
       amount: iAmount, due_date: iDueDate, status: iStatus as any,
-      payment_method: iPaymentMethod || null, notes: iNotes || null,
+      payment_method: (iPaymentMethod || null) as any, notes: iNotes || null,
       paid_at: iStatus === 'paid' ? new Date().toISOString() : null,
       created_by: user?.id,
     };
