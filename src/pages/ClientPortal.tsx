@@ -122,6 +122,15 @@ export default function ClientPortal() {
     }
 
     setProjects(projectsWithContents);
+
+    // Load invoices
+    const { data: invoices } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('client_id', clientId)
+      .order('due_date', { ascending: false });
+
+    setInvoicesData(invoices ?? []);
     setLoading(false);
   }
 
@@ -268,6 +277,9 @@ export default function ClientPortal() {
             </TabsTrigger>
             <TabsTrigger value="projects" className="data-[state=active]:bg-violet-600 data-[state=active]:text-white">
               Projetos
+            </TabsTrigger>
+            <TabsTrigger value="invoices" className="data-[state=active]:bg-violet-600 data-[state=active]:text-white">
+              Faturas
             </TabsTrigger>
           </TabsList>
 
