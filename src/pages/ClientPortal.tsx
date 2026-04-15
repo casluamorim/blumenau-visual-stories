@@ -55,6 +55,7 @@ export default function ClientPortal() {
   const { token } = useParams<{ token: string }>();
   const [client, setClient] = useState<ClientData | null>(null);
   const [projects, setProjects] = useState<ProjectData[]>([]);
+  const [invoicesData, setInvoicesData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [comment, setComment] = useState<Record<string, string>>({});
