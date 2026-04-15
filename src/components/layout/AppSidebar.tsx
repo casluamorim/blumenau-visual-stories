@@ -6,6 +6,7 @@ import {
   FileText,
   Tags,
   Activity,
+  DollarSign,
   Settings,
   LogOut,
   ChevronLeft,
@@ -23,6 +24,7 @@ const navItems = [
   { icon: FileText, label: 'Conteúdos', path: '/contents' },
   { icon: Tags, label: 'Tags', path: '/tags' },
   { icon: Activity, label: 'Atividades', path: '/activity' },
+  { icon: DollarSign, label: 'Financeiro', path: '/financial' },
   { icon: Settings, label: 'Configurações', path: '/settings' },
 ];
 

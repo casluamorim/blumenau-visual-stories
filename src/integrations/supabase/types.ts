@@ -331,6 +331,69 @@ export type Database = {
           },
         ]
       }
+      invoices: {
+        Row: {
+          amount: number
+          client_id: string
+          created_at: string
+          created_by: string | null
+          due_date: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          quote_id: string | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          due_date: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          quote_id?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          due_date?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          quote_id?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -441,6 +504,56 @@ export type Database = {
           },
         ]
       }
+      quotes: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          services: Json
+          status: Database["public"]["Enums"]["quote_status"]
+          title: string
+          total_value: number
+          updated_at: string
+          valid_until: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          services?: Json
+          status?: Database["public"]["Enums"]["quote_status"]
+          title: string
+          total_value?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          services?: Json
+          status?: Database["public"]["Enums"]["quote_status"]
+          title?: string
+          total_value?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tags: {
         Row: {
           color: string
@@ -511,6 +624,13 @@ export type Database = {
         | "cover"
         | "banner"
         | "other"
+      invoice_status: "pending" | "paid" | "overdue" | "cancelled"
+      payment_method:
+        | "pix"
+        | "bank_transfer"
+        | "credit_card"
+        | "boleto"
+        | "other"
       priority_level: "low" | "medium" | "high" | "urgent"
       project_status:
         | "briefing"
@@ -519,6 +639,7 @@ export type Database = {
         | "completed"
         | "paused"
         | "cancelled"
+      quote_status: "draft" | "sent" | "accepted" | "rejected" | "expired"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -665,6 +786,14 @@ export const Constants = {
         "banner",
         "other",
       ],
+      invoice_status: ["pending", "paid", "overdue", "cancelled"],
+      payment_method: [
+        "pix",
+        "bank_transfer",
+        "credit_card",
+        "boleto",
+        "other",
+      ],
       priority_level: ["low", "medium", "high", "urgent"],
       project_status: [
         "briefing",
@@ -674,6 +803,7 @@ export const Constants = {
         "paused",
         "cancelled",
       ],
+      quote_status: ["draft", "sent", "accepted", "rejected", "expired"],
     },
   },
 } as const

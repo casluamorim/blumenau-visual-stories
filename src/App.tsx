@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Dashboard from "./pages/Dashboard";
+import Financial from "./pages/Financial";
 import Clients from "./pages/Clients";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
@@ -39,6 +40,7 @@ function AppRoutes() {
       <Route path="/contents" element={<Contents />} />
       <Route path="/tags" element={<TagsPage />} />
       <Route path="/activity" element={<ActivityPage />} />
+      <Route path="/financial" element={<Financial />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
