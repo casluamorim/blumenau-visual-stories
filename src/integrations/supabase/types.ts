@@ -331,6 +331,154 @@ export type Database = {
           },
         ]
       }
+      expense_tags: {
+        Row: {
+          expense_id: string
+          tag_id: string
+        }
+        Insert: {
+          expense_id: string
+          tag_id: string
+        }
+        Update: {
+          expense_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_tags_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          attachment_url: string | null
+          category: string | null
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          due_date: string
+          financial_type: Database["public"]["Enums"]["financial_type"]
+          id: string
+          is_recurring_active: boolean
+          notes: string | null
+          parent_expense_id: string | null
+          project_id: string | null
+          recurrence: Database["public"]["Enums"]["recurrence_type"]
+          recurrence_day: number | null
+          recurrence_end: string | null
+          status: Database["public"]["Enums"]["expense_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          attachment_url?: string | null
+          category?: string | null
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description: string
+          due_date: string
+          financial_type?: Database["public"]["Enums"]["financial_type"]
+          id?: string
+          is_recurring_active?: boolean
+          notes?: string | null
+          parent_expense_id?: string | null
+          project_id?: string | null
+          recurrence?: Database["public"]["Enums"]["recurrence_type"]
+          recurrence_day?: number | null
+          recurrence_end?: string | null
+          status?: Database["public"]["Enums"]["expense_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          attachment_url?: string | null
+          category?: string | null
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          due_date?: string
+          financial_type?: Database["public"]["Enums"]["financial_type"]
+          id?: string
+          is_recurring_active?: boolean
+          notes?: string | null
+          parent_expense_id?: string | null
+          project_id?: string | null
+          recurrence?: Database["public"]["Enums"]["recurrence_type"]
+          recurrence_day?: number | null
+          recurrence_end?: string | null
+          status?: Database["public"]["Enums"]["expense_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_parent_expense_id_fkey"
+            columns: ["parent_expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_tags: {
+        Row: {
+          invoice_id: string
+          tag_id: string
+        }
+        Insert: {
+          invoice_id: string
+          tag_id: string
+        }
+        Update: {
+          invoice_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_tags_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           amount: number
@@ -338,11 +486,18 @@ export type Database = {
           created_at: string
           created_by: string | null
           due_date: string
+          financial_type: Database["public"]["Enums"]["financial_type"]
           id: string
+          is_recurring_active: boolean
           notes: string | null
           paid_at: string | null
+          parent_invoice_id: string | null
           payment_method: Database["public"]["Enums"]["payment_method"] | null
+          project_id: string | null
           quote_id: string | null
+          recurrence: Database["public"]["Enums"]["recurrence_type"]
+          recurrence_day: number | null
+          recurrence_end: string | null
           status: Database["public"]["Enums"]["invoice_status"]
           title: string
           updated_at: string
@@ -353,11 +508,18 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           due_date: string
+          financial_type?: Database["public"]["Enums"]["financial_type"]
           id?: string
+          is_recurring_active?: boolean
           notes?: string | null
           paid_at?: string | null
+          parent_invoice_id?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          project_id?: string | null
           quote_id?: string | null
+          recurrence?: Database["public"]["Enums"]["recurrence_type"]
+          recurrence_day?: number | null
+          recurrence_end?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
           title: string
           updated_at?: string
@@ -368,11 +530,18 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           due_date?: string
+          financial_type?: Database["public"]["Enums"]["financial_type"]
           id?: string
+          is_recurring_active?: boolean
           notes?: string | null
           paid_at?: string | null
+          parent_invoice_id?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          project_id?: string | null
           quote_id?: string | null
+          recurrence?: Database["public"]["Enums"]["recurrence_type"]
+          recurrence_day?: number | null
+          recurrence_end?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
           title?: string
           updated_at?: string
@@ -386,10 +555,89 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "invoices_parent_invoice_id_fkey"
+            columns: ["parent_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "invoices_quote_id_fkey"
             columns: ["quote_id"]
             isOneToOne: false
             referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      personal_income: {
+        Row: {
+          amount: number
+          attachment_url: string | null
+          category: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          due_date: string
+          id: string
+          is_recurring_active: boolean
+          notes: string | null
+          parent_income_id: string | null
+          recurrence: Database["public"]["Enums"]["recurrence_type"]
+          recurrence_day: number | null
+          recurrence_end: string | null
+          status: Database["public"]["Enums"]["expense_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          attachment_url?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description: string
+          due_date: string
+          id?: string
+          is_recurring_active?: boolean
+          notes?: string | null
+          parent_income_id?: string | null
+          recurrence?: Database["public"]["Enums"]["recurrence_type"]
+          recurrence_day?: number | null
+          recurrence_end?: string | null
+          status?: Database["public"]["Enums"]["expense_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          attachment_url?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          due_date?: string
+          id?: string
+          is_recurring_active?: boolean
+          notes?: string | null
+          parent_income_id?: string | null
+          recurrence?: Database["public"]["Enums"]["recurrence_type"]
+          recurrence_day?: number | null
+          recurrence_end?: string | null
+          status?: Database["public"]["Enums"]["expense_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personal_income_parent_income_id_fkey"
+            columns: ["parent_income_id"]
+            isOneToOne: false
+            referencedRelation: "personal_income"
             referencedColumns: ["id"]
           },
         ]
@@ -624,6 +872,8 @@ export type Database = {
         | "cover"
         | "banner"
         | "other"
+      expense_status: "pending" | "paid" | "overdue"
+      financial_type: "pj" | "pf"
       invoice_status: "pending" | "paid" | "overdue" | "cancelled"
       payment_method:
         | "pix"
@@ -640,6 +890,7 @@ export type Database = {
         | "paused"
         | "cancelled"
       quote_status: "draft" | "sent" | "accepted" | "rejected" | "expired"
+      recurrence_type: "one_time" | "recurring"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -786,6 +1037,8 @@ export const Constants = {
         "banner",
         "other",
       ],
+      expense_status: ["pending", "paid", "overdue"],
+      financial_type: ["pj", "pf"],
       invoice_status: ["pending", "paid", "overdue", "cancelled"],
       payment_method: [
         "pix",
@@ -804,6 +1057,7 @@ export const Constants = {
         "cancelled",
       ],
       quote_status: ["draft", "sent", "accepted", "rejected", "expired"],
+      recurrence_type: ["one_time", "recurring"],
     },
   },
 } as const
