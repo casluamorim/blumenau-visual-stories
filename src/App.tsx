@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Dashboard from "./pages/Dashboard";
 import Financial from "./pages/Financial";
+import FinancialPersonal from "./pages/FinancialPersonal";
 import Clients from "./pages/Clients";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
@@ -41,6 +42,7 @@ function AppRoutes() {
       <Route path="/tags" element={<TagsPage />} />
       <Route path="/activity" element={<ActivityPage />} />
       <Route path="/financial" element={<Financial />} />
+      <Route path="/financial/personal" element={<FinancialPersonal />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
