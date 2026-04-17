@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Dashboard from "./pages/Dashboard";
 import Financial from "./pages/Financial";
 import FinancialPersonal from "./pages/FinancialPersonal";
+import CashFlow from "./pages/CashFlow";
 import Clients from "./pages/Clients";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
@@ -43,6 +44,7 @@ function AppRoutes() {
       <Route path="/activity" element={<ActivityPage />} />
       <Route path="/financial" element={<Financial />} />
       <Route path="/financial/personal" element={<FinancialPersonal />} />
+      <Route path="/cashflow" element={<CashFlow />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
