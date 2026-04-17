@@ -7,6 +7,7 @@ import {
   Tags,
   Activity,
   DollarSign,
+  TrendingUp,
   Settings,
   LogOut,
   ChevronLeft,
@@ -26,6 +27,7 @@ const navItems = [
   { icon: Activity, label: 'Atividades', path: '/activity' },
   { icon: DollarSign, label: 'Financeiro PJ', path: '/financial' },
   { icon: DollarSign, label: 'Financeiro PF', path: '/financial/personal' },
+  { icon: TrendingUp, label: 'Fluxo de Caixa', path: '/cashflow' },
   { icon: Settings, label: 'Configurações', path: '/settings' },
 ];
 
