@@ -44,6 +44,66 @@ export type Database = {
         }
         Relationships: []
       }
+      agency_settings: {
+        Row: {
+          agency_document: string | null
+          agency_email: string | null
+          agency_logo_url: string | null
+          agency_name: string
+          agency_phone: string | null
+          created_at: string
+          currency: string
+          default_invoice_due_days: number
+          default_pix_key: string | null
+          default_pix_key_type: string | null
+          default_revision_limit: number
+          id: string
+          invoice_prefix: string
+          next_invoice_number: number
+          timezone: string
+          updated_at: string
+          whatsapp_template: string
+        }
+        Insert: {
+          agency_document?: string | null
+          agency_email?: string | null
+          agency_logo_url?: string | null
+          agency_name?: string
+          agency_phone?: string | null
+          created_at?: string
+          currency?: string
+          default_invoice_due_days?: number
+          default_pix_key?: string | null
+          default_pix_key_type?: string | null
+          default_revision_limit?: number
+          id?: string
+          invoice_prefix?: string
+          next_invoice_number?: number
+          timezone?: string
+          updated_at?: string
+          whatsapp_template?: string
+        }
+        Update: {
+          agency_document?: string | null
+          agency_email?: string | null
+          agency_logo_url?: string | null
+          agency_name?: string
+          agency_phone?: string | null
+          created_at?: string
+          currency?: string
+          default_invoice_due_days?: number
+          default_pix_key?: string | null
+          default_pix_key_type?: string | null
+          default_revision_limit?: number
+          id?: string
+          invoice_prefix?: string
+          next_invoice_number?: number
+          timezone?: string
+          updated_at?: string
+          whatsapp_template?: string
+        }
+        Relationships: []
+      }
       client_access_tokens: {
         Row: {
           client_id: string
