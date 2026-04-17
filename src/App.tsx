@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import Financial from "./pages/Financial";
 import FinancialPersonal from "./pages/FinancialPersonal";
 import CashFlow from "./pages/CashFlow";
+import Settings from "./pages/Settings";
 import Clients from "./pages/Clients";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
@@ -45,6 +46,7 @@ function AppRoutes() {
       <Route path="/financial" element={<Financial />} />
       <Route path="/financial/personal" element={<FinancialPersonal />} />
       <Route path="/cashflow" element={<CashFlow />} />
+      <Route path="/settings" element={<Settings />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
