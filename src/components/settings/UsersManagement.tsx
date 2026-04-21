@@ -23,6 +23,7 @@ import {
 import {
   Loader2, UserPlus, Copy, Power, Link2, Users, Trash2, Shield,
 } from 'lucide-react';
+import { logAudit } from '@/lib/auditLog';
 
 type AppRole = 'admin' | 'manager' | 'editor' | 'viewer' | 'financeiro' | 'social_media';
 
@@ -172,6 +173,12 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
 
       const link = `${window.location.origin}/accept-invite/${token}?role=${encodeURIComponent(newRole)}&email=${encodeURIComponent(newEmail.trim().toLowerCase())}`;
       setGeneratedLink(link);
+      await logAudit({
+        action: 'user.invited',
+        entityType: 'user',
+        entityId: placeholderUserId,
+        details: { full_name: newName.trim(), email: newEmail.trim().toLowerCase(), role: newRole },
+      });
       toast({ title: 'Convite criado', description: 'Copie o link e envie ao novo usuário' });
       await loadAll();
     } catch (e: any) {
@@ -192,11 +199,18 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
 
   async function toggleActive(u: UserRow) {
     try {
+      const newStatus = !u.is_active;
       const { error } = await supabase
         .from('profiles')
-        .update({ is_active: !u.is_active })
+        .update({ is_active: newStatus })
         .eq('user_id', u.user_id);
       if (error) throw error;
+      await logAudit({
+        action: newStatus ? 'user.activated' : 'user.deactivated',
+        entityType: 'user',
+        entityId: u.user_id,
+        details: { full_name: u.full_name, email: u.email },
+      });
       toast({ title: u.is_active ? 'Usuário desativado' : 'Usuário ativado' });
       await loadAll();
     } catch (e: any) {
@@ -206,6 +220,7 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
 
   async function changeRole(u: UserRow, role: AppRole) {
     try {
+      const previousRole = (u.roles[0] || (u as any).role || 'editor') as AppRole;
       // remove existing roles, add new one (single role per user for simplicity)
       const { error: delErr } = await supabase.from('user_roles').delete().eq('user_id', u.user_id);
       if (delErr) throw delErr;
@@ -213,6 +228,12 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
       if (insErr) throw insErr;
       // also mirror on profile.role text for display
       await supabase.from('profiles').update({ role }).eq('user_id', u.user_id);
+      await logAudit({
+        action: 'user.role_changed',
+        entityType: 'user',
+        entityId: u.user_id,
+        details: { full_name: u.full_name, from: previousRole, to: role },
+      });
       toast({ title: 'Função atualizada' });
       await loadAll();
     } catch (e: any) {
@@ -241,13 +262,26 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
   async function addAssignment(clientId: string) {
     if (!assignTarget) return;
     try {
-      const { error } = await supabase.from('client_assignments').insert({
+      const { data, error } = await supabase.from('client_assignments').insert({
         client_id: clientId,
         user_id: assignTarget.user_id,
         access_level: 'edit',
         assigned_by: user?.id,
-      });
+      }).select('id').single();
       if (error) throw error;
+      const client = clients.find(c => c.id === clientId);
+      await logAudit({
+        action: 'assignment.created',
+        entityType: 'client_assignment',
+        entityId: data?.id ?? null,
+        details: {
+          user_id: assignTarget.user_id,
+          user_name: assignTarget.full_name,
+          client_id: clientId,
+          client_name: client?.company || client?.name,
+          access_level: 'edit',
+        },
+      });
       await openAssignments(assignTarget);
       await loadAll();
     } catch (e: any) {
@@ -257,8 +291,21 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
 
   async function removeAssignment(id: string) {
     try {
+      const removed = assignments.find(a => a.id === id);
+      const client = removed ? clients.find(c => c.id === removed.client_id) : null;
       const { error } = await supabase.from('client_assignments').delete().eq('id', id);
       if (error) throw error;
+      await logAudit({
+        action: 'assignment.removed',
+        entityType: 'client_assignment',
+        entityId: id,
+        details: {
+          user_id: removed?.user_id,
+          user_name: assignTarget?.full_name,
+          client_id: removed?.client_id,
+          client_name: client?.company || client?.name,
+        },
+      });
       if (assignTarget) await openAssignments(assignTarget);
       await loadAll();
     } catch (e: any) {
@@ -268,8 +315,23 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
 
   async function changeAssignmentLevel(id: string, level: 'view' | 'edit' | 'admin') {
     try {
+      const previous = assignments.find(a => a.id === id);
+      const client = previous ? clients.find(c => c.id === previous.client_id) : null;
       const { error } = await supabase.from('client_assignments').update({ access_level: level }).eq('id', id);
       if (error) throw error;
+      await logAudit({
+        action: 'assignment.level_changed',
+        entityType: 'client_assignment',
+        entityId: id,
+        details: {
+          user_id: previous?.user_id,
+          user_name: assignTarget?.full_name,
+          client_id: previous?.client_id,
+          client_name: client?.company || client?.name,
+          from: previous?.access_level,
+          to: level,
+        },
+      });
       if (assignTarget) await openAssignments(assignTarget);
     } catch (e: any) {
       toast({ title: 'Erro', description: e.message, variant: 'destructive' });
