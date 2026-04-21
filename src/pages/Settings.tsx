@@ -15,8 +15,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Building2, Key, MessageSquare, FileText, User as UserIcon,
-  Upload, Save, Loader2, Copy, Eye, EyeOff
+  Upload, Save, Loader2, Copy, Eye, EyeOff, Users as UsersIcon,
 } from 'lucide-react';
+import { UsersManagement } from '@/components/settings/UsersManagement';
 
 interface AgencySettings {
   id: string;
@@ -201,13 +202,19 @@ export default function Settings() {
         </div>
 
         <Tabs defaultValue="agency">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="agency"><Building2 className="mr-2 h-4 w-4" />Agência</TabsTrigger>
             <TabsTrigger value="payments"><Key className="mr-2 h-4 w-4" />Pagamentos</TabsTrigger>
             <TabsTrigger value="whatsapp"><MessageSquare className="mr-2 h-4 w-4" />WhatsApp</TabsTrigger>
             <TabsTrigger value="defaults"><FileText className="mr-2 h-4 w-4" />Padrões</TabsTrigger>
+            <TabsTrigger value="users"><UsersIcon className="mr-2 h-4 w-4" />Usuários</TabsTrigger>
             <TabsTrigger value="profile"><UserIcon className="mr-2 h-4 w-4" />Perfil</TabsTrigger>
           </TabsList>
+
+          {/* USUÁRIOS */}
+          <TabsContent value="users" className="mt-6">
+            <UsersManagement isAdmin={isAdmin} />
+          </TabsContent>
 
           {/* AGÊNCIA */}
           <TabsContent value="agency" className="mt-6">

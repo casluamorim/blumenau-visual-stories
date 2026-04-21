@@ -17,6 +17,7 @@ import TagsPage from "./pages/TagsPage";
 import ActivityPage from "./pages/ActivityPage";
 import ClientPortal from "./pages/ClientPortal";
 import Auth from "./pages/Auth";
+import AcceptInvite from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -61,6 +62,8 @@ const App = () => (
         <Routes>
           {/* Public portal route - no auth required */}
           <Route path="/portal/:token" element={<ClientPortal />} />
+          {/* Public invite acceptance route */}
+          <Route path="/accept-invite/:token" element={<AcceptInvite />} />
           {/* All other routes require auth */}
           <Route path="/*" element={
             <AuthProvider>
