@@ -31,8 +31,8 @@ export async function logAudit({ action, entityType, entityId, details }: LogPar
       entity_type: entityType,
       entity_id: entityId ?? null,
       user_id: user?.id ?? null,
-      details: details ?? {},
-    });
+      details: (details ?? {}) as never,
+    } as never);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn('[audit] failed to log', action, err);
