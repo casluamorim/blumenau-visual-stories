@@ -103,6 +103,13 @@ export default function AcceptInvite() {
       // 4. Delete the placeholder invite profile
       await supabase.from('profiles').delete().eq('id', invite.id);
 
+      await logAudit({
+        action: 'user.invite_accepted',
+        entityType: 'user',
+        entityId: newUserId,
+        details: { full_name: invite.full_name, email: invite.email, role },
+      });
+
       toast({ title: 'Bem-vindo ao Racun OS!', description: 'Conta criada com sucesso.' });
       navigate('/');
     } catch (e: any) {
