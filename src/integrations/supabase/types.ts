@@ -142,6 +142,44 @@ export type Database = {
           },
         ]
       }
+      client_assignments: {
+        Row: {
+          access_level: string
+          assigned_by: string | null
+          client_id: string
+          created_at: string
+          id: string
+          is_primary: boolean
+          user_id: string
+        }
+        Insert: {
+          access_level?: string
+          assigned_by?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          user_id: string
+        }
+        Update: {
+          access_level?: string
+          assigned_by?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_tags: {
         Row: {
           client_id: string
@@ -177,6 +215,7 @@ export type Database = {
           avg_response_time: string | null
           company: string | null
           created_at: string
+          created_by: string | null
           email: string | null
           id: string
           name: string
@@ -192,6 +231,7 @@ export type Database = {
           avg_response_time?: string | null
           company?: string | null
           created_at?: string
+          created_by?: string | null
           email?: string | null
           id?: string
           name: string
@@ -207,6 +247,7 @@ export type Database = {
           avg_response_time?: string | null
           company?: string | null
           created_at?: string
+          created_by?: string | null
           email?: string | null
           id?: string
           name?: string
@@ -709,6 +750,11 @@ export type Database = {
           email: string | null
           full_name: string
           id: string
+          invite_expires_at: string | null
+          invite_token: string | null
+          invited_at: string | null
+          invited_by: string | null
+          is_active: boolean
           role: string | null
           updated_at: string
           user_id: string
@@ -719,6 +765,11 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+          invite_expires_at?: string | null
+          invite_token?: string | null
+          invited_at?: string | null
+          invited_by?: string | null
+          is_active?: boolean
           role?: string | null
           updated_at?: string
           user_id: string
@@ -729,6 +780,11 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+          invite_expires_at?: string | null
+          invite_token?: string | null
+          invited_at?: string | null
+          invited_by?: string | null
+          is_active?: boolean
           role?: string | null
           updated_at?: string
           user_id?: string
@@ -906,6 +962,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_client: {
+        Args: { _client_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_edit_client: {
+        Args: { _client_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -915,7 +979,13 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "manager" | "editor" | "viewer"
+      app_role:
+        | "admin"
+        | "manager"
+        | "editor"
+        | "viewer"
+        | "financeiro"
+        | "social_media"
       client_status: "active" | "inactive" | "prospect"
       content_status:
         | "draft"
@@ -1078,7 +1148,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "manager", "editor", "viewer"],
+      app_role: [
+        "admin",
+        "manager",
+        "editor",
+        "viewer",
+        "financeiro",
+        "social_media",
+      ],
       client_status: ["active", "inactive", "prospect"],
       content_status: [
         "draft",
