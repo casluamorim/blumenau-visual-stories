@@ -202,14 +202,28 @@ export default function Settings() {
         </div>
 
         <Tabs defaultValue="agency">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="agency"><Building2 className="mr-2 h-4 w-4" />Agência</TabsTrigger>
-            <TabsTrigger value="payments"><Key className="mr-2 h-4 w-4" />Pagamentos</TabsTrigger>
-            <TabsTrigger value="whatsapp"><MessageSquare className="mr-2 h-4 w-4" />WhatsApp</TabsTrigger>
-            <TabsTrigger value="defaults"><FileText className="mr-2 h-4 w-4" />Padrões</TabsTrigger>
-            <TabsTrigger value="users"><UsersIcon className="mr-2 h-4 w-4" />Usuários</TabsTrigger>
-            <TabsTrigger value="profile"><UserIcon className="mr-2 h-4 w-4" />Perfil</TabsTrigger>
-          </TabsList>
+          <div className="-mx-4 md:mx-0 px-4 md:px-0 overflow-x-auto">
+            <TabsList className="inline-flex w-max md:grid md:w-full md:grid-cols-6 gap-1">
+              <TabsTrigger value="agency" className="whitespace-nowrap">
+                <Building2 className="mr-2 h-4 w-4" />Agência
+              </TabsTrigger>
+              <TabsTrigger value="payments" className="whitespace-nowrap">
+                <Key className="mr-2 h-4 w-4" />Pagamentos
+              </TabsTrigger>
+              <TabsTrigger value="whatsapp" className="whitespace-nowrap">
+                <MessageSquare className="mr-2 h-4 w-4" />WhatsApp
+              </TabsTrigger>
+              <TabsTrigger value="defaults" className="whitespace-nowrap">
+                <FileText className="mr-2 h-4 w-4" />Padrões
+              </TabsTrigger>
+              <TabsTrigger value="users" className="whitespace-nowrap">
+                <UsersIcon className="mr-2 h-4 w-4" />Usuários
+              </TabsTrigger>
+              <TabsTrigger value="profile" className="whitespace-nowrap">
+                <UserIcon className="mr-2 h-4 w-4" />Perfil
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* USUÁRIOS */}
           <TabsContent value="users" className="mt-6">
