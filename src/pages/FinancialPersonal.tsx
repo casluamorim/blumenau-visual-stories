@@ -184,7 +184,7 @@ export default function FinancialPersonal() {
   function renderTable(data: any[], type: 'income' | 'expense') {
     const isIncome = type === 'income';
     return (
-      <Table>
+      <div className="table-scroll"><Table>
         <TableHeader>
           <TableRow>
             <TableHead>Descrição</TableHead>
