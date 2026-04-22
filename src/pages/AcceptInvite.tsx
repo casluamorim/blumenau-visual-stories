@@ -83,11 +83,6 @@ export default function AcceptInvite() {
 
       const role = (params.get('role') || invite.role || 'editor');
 
-      await db.rpc('mark_user_invite_accepted', {
-        _token: invite.token,
-        _accepted_by: newUserId,
-      });
-
       await logAudit({
         action: 'user.invite_accepted',
         entityType: 'user',
