@@ -191,7 +191,7 @@ export default function Settings() {
       <div className="space-y-6 max-w-4xl">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display text-3xl font-bold">Configurações</h1>
+            <h1 className="page-title">Configurações</h1>
             <p className="text-muted-foreground">Personalize o Racun OS para a sua agência</p>
           </div>
           {!isAdmin && (

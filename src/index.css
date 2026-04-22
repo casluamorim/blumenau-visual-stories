@@ -102,3 +102,25 @@
 .animate-fade-in {
   animation: fade-in 0.3s ease-out;
 }
+
+/* Responsive helpers */
+@layer utilities {
+  .page-title {
+    @apply font-display text-2xl md:text-3xl font-bold text-foreground;
+  }
+}
+
+/* Tables overflow on mobile */
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Dialog content safer for mobile */
+@media (max-width: 640px) {
+  [role="dialog"] {
+    max-width: calc(100vw - 1rem) !important;
+  }
+}
+

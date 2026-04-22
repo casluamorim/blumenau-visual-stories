@@ -308,7 +308,7 @@ export default function CashFlow() {
         {/* Header */}
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="font-display text-3xl font-bold">Fluxo de Caixa</h1>
+            <h1 className="page-title">Fluxo de Caixa</h1>
             <p className="text-muted-foreground">Visão consolidada de entradas, saídas e saldo projetado</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

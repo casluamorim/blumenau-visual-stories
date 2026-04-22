@@ -48,7 +48,7 @@ export default function Contents() {
     <AppLayout>
       <div className="animate-fade-in space-y-6">
         <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">Conteúdos</h1>
+          <h1 className="page-title">Conteúdos</h1>
           <p className="text-muted-foreground">Todos os conteúdos da agência</p>
         </div>
 

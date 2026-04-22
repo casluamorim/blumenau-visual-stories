@@ -116,7 +116,7 @@ export default function ActivityPage() {
     <AppLayout>
       <div className="animate-fade-in space-y-6">
         <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">Atividades</h1>
+          <h1 className="page-title">Atividades</h1>
           <p className="text-muted-foreground">Histórico de ações da equipe — quem fez, o quê e quando</p>
         </div>
 

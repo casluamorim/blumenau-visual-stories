@@ -434,7 +434,7 @@ export default function Financial() {
       <div className="animate-fade-in space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">Financeiro PJ</h1>
+            <h1 className="page-title">Financeiro PJ</h1>
             <p className="text-muted-foreground">Orçamentos, faturas, despesas e cobranças</p>
           </div>
         </div>
@@ -480,17 +480,17 @@ export default function Financial() {
 
         {/* Tabs */}
         <Tabs defaultValue="invoices" className="space-y-4">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <TabsList>
+          <div className="flex items-start sm:items-center justify-between gap-3 flex-col sm:flex-row">
+            <TabsList className="w-full sm:w-auto overflow-x-auto">
               <TabsTrigger value="invoices">Faturas</TabsTrigger>
               <TabsTrigger value="expenses">Despesas</TabsTrigger>
               <TabsTrigger value="quotes">Orçamentos</TabsTrigger>
             </TabsList>
-            <div className="flex items-center gap-2">
-              <div className="relative">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative w-full sm:w-56">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)}
-                  className="pl-9 w-56 bg-card border-border" />
+                  className="pl-9 w-full bg-card border-border" />
               </div>
             </div>
           </div>
@@ -500,8 +500,8 @@ export default function Financial() {
             <div className="flex justify-end">
               <Button onClick={openNewInvoice}><Plus className="mr-2 h-4 w-4" /> Nova Fatura</Button>
             </div>
-            <Card className="border-border bg-card">
-              <Table>
+            <Card className="border-border bg-card overflow-hidden">
+              <div className="table-scroll"><Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Título</TableHead>
@@ -580,7 +580,7 @@ export default function Financial() {
                     </TableRow>
                   )}
                 </TableBody>
-              </Table>
+              </Table></div>
             </Card>
           </TabsContent>
 
@@ -589,8 +589,8 @@ export default function Financial() {
             <div className="flex justify-end">
               <Button onClick={openNewExpense}><Plus className="mr-2 h-4 w-4" /> Nova Despesa</Button>
             </div>
-            <Card className="border-border bg-card">
-              <Table>
+            <Card className="border-border bg-card overflow-hidden">
+              <div className="table-scroll"><Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Descrição</TableHead>
@@ -672,7 +672,7 @@ export default function Financial() {
                     </TableRow>
                   )}
                 </TableBody>
-              </Table>
+              </Table></div>
             </Card>
           </TabsContent>
 
@@ -681,8 +681,8 @@ export default function Financial() {
             <div className="flex justify-end">
               <Button onClick={openNewQuote}><Plus className="mr-2 h-4 w-4" /> Novo Orçamento</Button>
             </div>
-            <Card className="border-border bg-card">
-              <Table>
+            <Card className="border-border bg-card overflow-hidden">
+              <div className="table-scroll"><Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Título</TableHead>
@@ -741,7 +741,7 @@ export default function Financial() {
                     </TableRow>
                   )}
                 </TableBody>
-              </Table>
+              </Table></div>
             </Card>
           </TabsContent>
         </Tabs>
@@ -866,10 +866,10 @@ export default function Financial() {
               </div>
               <div>
                 <Label>Projeto</Label>
-                <Select value={iProjectId} onValueChange={setIProjectId}>
+                <Select value={iProjectId || '__none__'} onValueChange={(v) => setIProjectId(v === '__none__' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="__none__">Nenhum</SelectItem>
                     {projects.filter(p => !iClientId || p.client_id === iClientId).map(p =>
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     )}
@@ -986,20 +986,20 @@ export default function Financial() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Cliente (opcional)</Label>
-                <Select value={eClientId} onValueChange={setEClientId}>
+                <Select value={eClientId || '__none__'} onValueChange={(v) => setEClientId(v === '__none__' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="__none__">Nenhum</SelectItem>
                     {clients.map(c => <SelectItem key={c.id} value={c.id}>{clientSelectLabel(c)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label>Projeto (opcional)</Label>
-                <Select value={eProjectId} onValueChange={setEProjectId}>
+                <Select value={eProjectId || '__none__'} onValueChange={(v) => setEProjectId(v === '__none__' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="__none__">Nenhum</SelectItem>
                     {projects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
