@@ -500,8 +500,8 @@ export default function Financial() {
             <div className="flex justify-end">
               <Button onClick={openNewInvoice}><Plus className="mr-2 h-4 w-4" /> Nova Fatura</Button>
             </div>
-            <Card className="border-border bg-card">
-              <Table>
+            <Card className="border-border bg-card overflow-hidden">
+              <div className="table-scroll"><Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Título</TableHead>
@@ -589,8 +589,8 @@ export default function Financial() {
             <div className="flex justify-end">
               <Button onClick={openNewExpense}><Plus className="mr-2 h-4 w-4" /> Nova Despesa</Button>
             </div>
-            <Card className="border-border bg-card">
-              <Table>
+            <Card className="border-border bg-card overflow-hidden">
+              <div className="table-scroll"><Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Descrição</TableHead>
@@ -681,8 +681,8 @@ export default function Financial() {
             <div className="flex justify-end">
               <Button onClick={openNewQuote}><Plus className="mr-2 h-4 w-4" /> Novo Orçamento</Button>
             </div>
-            <Card className="border-border bg-card">
-              <Table>
+            <Card className="border-border bg-card overflow-hidden">
+              <div className="table-scroll"><Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Título</TableHead>
