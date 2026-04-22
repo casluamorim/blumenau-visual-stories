@@ -244,7 +244,7 @@ export default function FinancialPersonal() {
             <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum registro</TableCell></TableRow>
           )}
         </TableBody>
-      </Table>
+      </Table></div>
     );
   }
 
