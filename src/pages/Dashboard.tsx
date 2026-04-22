@@ -194,7 +194,7 @@ export default function Dashboard() {
     <AppLayout>
       <div className="animate-fade-in space-y-6">
         <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">Dashboard</h1>
+          <h1 className="page-title">Dashboard</h1>
           <p className="text-muted-foreground">Visão geral da operação da Racun</p>
         </div>
 

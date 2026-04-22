@@ -434,7 +434,7 @@ export default function Financial() {
       <div className="animate-fade-in space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">Financeiro PJ</h1>
+            <h1 className="page-title">Financeiro PJ</h1>
             <p className="text-muted-foreground">Orçamentos, faturas, despesas e cobranças</p>
           </div>
         </div>

@@ -252,7 +252,7 @@ export default function FinancialPersonal() {
     <AppLayout>
       <div className="animate-fade-in space-y-6">
         <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">Financeiro PF</h1>
+          <h1 className="page-title">Financeiro PF</h1>
           <p className="text-muted-foreground">Receitas e despesas pessoais</p>
         </div>
 
