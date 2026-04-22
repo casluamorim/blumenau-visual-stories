@@ -11,12 +11,11 @@ import { logAudit } from '@/lib/auditLog';
 
 interface InviteProfile {
   id: string;
-  user_id: string;
   full_name: string;
-  email: string | null;
-  invite_token: string | null;
-  invite_expires_at: string | null;
-  role: string | null;
+  email: string;
+  token: string;
+  expires_at: string;
+  role: string;
 }
 
 export default function AcceptInvite() {
@@ -24,6 +23,7 @@ export default function AcceptInvite() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const db = supabase as any;
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -38,19 +38,16 @@ export default function AcceptInvite() {
     if (!token) { setError('Token inválido'); setLoading(false); return; }
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, user_id, full_name, email, invite_token, invite_expires_at, role')
-        .eq('invite_token', token)
-        .maybeSingle();
+      const { data, error } = await db.rpc('get_user_invite_by_token', { _token: token });
 
       if (error) throw error;
-      if (!data) { setError('Convite não encontrado ou já utilizado.'); return; }
-      if (data.invite_expires_at && new Date(data.invite_expires_at) < new Date()) {
+      const inviteData = Array.isArray(data) ? data[0] : data;
+      if (!inviteData) { setError('Convite não encontrado ou já utilizado.'); return; }
+      if (inviteData.expires_at && new Date(inviteData.expires_at) < new Date()) {
         setError('Este convite expirou. Solicite um novo ao administrador.');
         return;
       }
-      setInvite(data as InviteProfile);
+      setInvite(inviteData as InviteProfile);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -59,7 +56,7 @@ export default function AcceptInvite() {
   }
 
   async function accept() {
-    if (!invite || !invite.email) return;
+    if (!invite) return;
     if (password.length < 6) {
       toast({ title: 'Senha muito curta', description: 'Mínimo 6 caracteres', variant: 'destructive' });
       return;
@@ -84,24 +81,7 @@ export default function AcceptInvite() {
       const newUserId = signUp.user?.id;
       if (!newUserId) throw new Error('Não foi possível criar o usuário.');
 
-      // 2. The handle_new_user trigger creates a fresh profile.
-      // Update role + active + clear invite on that NEW profile (the one matching auth.uid())
       const role = (params.get('role') || invite.role || 'editor');
-
-      // Wait briefly for trigger to fire if needed
-      await new Promise(r => setTimeout(r, 400));
-
-      await supabase.from('profiles').update({
-        full_name: invite.full_name,
-        role,
-        is_active: true,
-      }).eq('user_id', newUserId);
-
-      // 3. Insert role into user_roles
-      await supabase.from('user_roles').insert({ user_id: newUserId, role: role as any });
-
-      // 4. Delete the placeholder invite profile
-      await supabase.from('profiles').delete().eq('id', invite.id);
 
       await logAudit({
         action: 'user.invite_accepted',

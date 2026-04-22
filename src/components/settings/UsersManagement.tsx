@@ -56,6 +56,8 @@ interface UserRow {
   invited_at: string | null;
   roles: AppRole[];
   client_count: number;
+  invite_id?: string;
+  is_invite?: boolean;
 }
 
 interface Client {
@@ -75,6 +77,7 @@ interface Assignment {
 export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
   const { toast } = useToast();
   const { user } = useAuth();
+  const db = supabase as any;
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -95,18 +98,24 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
 
   useEffect(() => { if (isAdmin) loadAll(); else setLoading(false); }, [isAdmin]);
 
+  function buildInviteLink(token: string, role: AppRole, email: string) {
+    return `${window.location.origin}/accept-invite/${token}?role=${encodeURIComponent(role)}&email=${encodeURIComponent(email)}`;
+  }
+
   async function loadAll() {
     setLoading(true);
     try {
-      const [profilesRes, rolesRes, clientsRes, assignCountRes] = await Promise.all([
+      const [profilesRes, rolesRes, clientsRes, assignCountRes, invitesRes] = await Promise.all([
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
         supabase.from('user_roles').select('user_id, role'),
         supabase.from('clients').select('id, name, company').order('name'),
         supabase.from('client_assignments').select('user_id'),
+        db.from('user_invites').select('id, full_name, email, role, token, expires_at, created_at').is('accepted_at', null).order('created_at', { ascending: false }),
       ]);
       if (profilesRes.error) throw profilesRes.error;
       if (rolesRes.error) throw rolesRes.error;
       if (clientsRes.error) throw clientsRes.error;
+      if (invitesRes.error) throw invitesRes.error;
 
       const rolesByUser: Record<string, AppRole[]> = {};
       (rolesRes.data || []).forEach((r: any) => {
@@ -129,7 +138,23 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
         roles: rolesByUser[p.user_id] || [],
         client_count: countByUser[p.user_id] || 0,
       }));
-      setUsers(rows);
+
+      const inviteRows: UserRow[] = (invitesRes.data || []).map((invite: any) => ({
+        id: `invite-${invite.id}`,
+        invite_id: invite.id,
+        user_id: `invite-${invite.id}`,
+        full_name: invite.full_name,
+        email: invite.email,
+        is_active: false,
+        invite_token: invite.token,
+        invite_expires_at: invite.expires_at,
+        invited_at: invite.created_at,
+        roles: [invite.role],
+        client_count: 0,
+        is_invite: true,
+      }));
+
+      setUsers([...inviteRows, ...rows]);
       setClients((clientsRes.data || []) as Client[]);
     } catch (e: any) {
       toast({ title: 'Erro ao carregar usuários', description: e.message, variant: 'destructive' });
@@ -149,35 +174,41 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
       toast({ title: 'Preencha nome e e-mail', variant: 'destructive' });
       return;
     }
+
+    const normalizedEmail = newEmail.trim().toLowerCase();
+    const hasExistingUser = users.some(
+      (u) => !u.is_invite && (u.email || '').toLowerCase() === normalizedEmail,
+    );
+
+    if (hasExistingUser) {
+      toast({ title: 'E-mail já cadastrado', description: 'Já existe um usuário com este e-mail.', variant: 'destructive' });
+      return;
+    }
+
     setCreating(true);
     try {
       const token = genToken();
       const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-      // Create profile placeholder (user_id = generated uuid will be replaced on accept)
-      // We use a deterministic approach: store invite in a "pending" profile with random user_id
-      // When user signs up, we update the profile to match auth.uid().
-      const placeholderUserId = crypto.randomUUID();
-      const { error: pErr } = await supabase.from('profiles').insert({
-        user_id: placeholderUserId,
+      await db.from('user_invites').delete().eq('email', normalizedEmail).is('accepted_at', null);
+
+      const { data: inviteData, error: pErr } = await db.from('user_invites').insert({
         full_name: newName.trim(),
-        email: newEmail.trim().toLowerCase(),
-        is_active: false,
-        invite_token: token,
-        invite_expires_at: expires,
-        invited_by: user?.id,
-        invited_at: new Date().toISOString(),
+        email: normalizedEmail,
         role: newRole,
-      });
+        token,
+        expires_at: expires,
+        invited_by: user?.id,
+      }).select('id').single();
       if (pErr) throw pErr;
 
-      const link = `${window.location.origin}/accept-invite/${token}?role=${encodeURIComponent(newRole)}&email=${encodeURIComponent(newEmail.trim().toLowerCase())}`;
+      const link = buildInviteLink(token, newRole, normalizedEmail);
       setGeneratedLink(link);
       await logAudit({
         action: 'user.invited',
         entityType: 'user',
-        entityId: placeholderUserId,
-        details: { full_name: newName.trim(), email: newEmail.trim().toLowerCase(), role: newRole },
+        entityId: inviteData?.id ?? null,
+        details: { full_name: newName.trim(), email: normalizedEmail, role: newRole },
       });
       toast({ title: 'Convite criado', description: 'Copie o link e envie ao novo usuário' });
       await loadAll();
@@ -198,6 +229,7 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
   }
 
   async function toggleActive(u: UserRow) {
+    if (u.is_invite) return;
     try {
       const newStatus = !u.is_active;
       const { error } = await supabase
@@ -221,6 +253,20 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
   async function changeRole(u: UserRow, role: AppRole) {
     try {
       const previousRole = (u.roles[0] || (u as any).role || 'editor') as AppRole;
+      if (u.is_invite && u.invite_id) {
+        const { error } = await db.from('user_invites').update({ role }).eq('id', u.invite_id);
+        if (error) throw error;
+        await logAudit({
+          action: 'user.role_changed',
+          entityType: 'user',
+          entityId: u.invite_id,
+          details: { full_name: u.full_name, from: previousRole, to: role, email: u.email, pending_invite: true },
+        });
+        toast({ title: 'Função do convite atualizada' });
+        await loadAll();
+        return;
+      }
+
       // remove existing roles, add new one (single role per user for simplicity)
       const { error: delErr } = await supabase.from('user_roles').delete().eq('user_id', u.user_id);
       if (delErr) throw delErr;
@@ -242,6 +288,10 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
   }
 
   async function openAssignments(u: UserRow) {
+    if (u.is_invite) {
+      toast({ title: 'Convite pendente', description: 'Vincule clientes depois que o usuário concluir o cadastro.', variant: 'destructive' });
+      return;
+    }
     setAssignTarget(u);
     setOpenAssign(true);
     setLoadingAssign(true);
@@ -453,7 +503,7 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
                 </TableRow>
               ) : users.map(u => {
                 const currentRole = (u.roles[0] || (u as any).role || 'editor') as AppRole;
-                const isPending = !!u.invite_token && !u.is_active;
+                const isPending = u.is_invite || (!!u.invite_token && !u.is_active);
                 return (
                   <TableRow key={u.id}>
                     <TableCell className="font-medium">{u.full_name}</TableCell>
@@ -487,15 +537,15 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => copyLink(`${window.location.origin}/accept-invite/${u.invite_token}?role=${currentRole}&email=${encodeURIComponent(u.email || '')}`)}
+                          onClick={() => copyLink(buildInviteLink(u.invite_token, currentRole, u.email || ''))}
                         >
                           <Copy className="h-4 w-4" />
                         </Button>
                       )}
-                      <Button variant="ghost" size="sm" onClick={() => openAssignments(u)}>
+                      <Button variant="ghost" size="sm" onClick={() => openAssignments(u)} disabled={isPending}>
                         <Link2 className="h-4 w-4" />
                       </Button>
-                      <AlertDialog>
+                      {!isPending && <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="ghost" size="sm">
                             <Power className={`h-4 w-4 ${u.is_active ? 'text-foreground' : 'text-muted-foreground'}`} />
@@ -515,7 +565,7 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
                             <AlertDialogAction onClick={() => toggleActive(u)}>Confirmar</AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
-                      </AlertDialog>
+                      </AlertDialog>}
                     </TableCell>
                   </TableRow>
                 );
