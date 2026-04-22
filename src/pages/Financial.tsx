@@ -480,17 +480,17 @@ export default function Financial() {
 
         {/* Tabs */}
         <Tabs defaultValue="invoices" className="space-y-4">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <TabsList>
+          <div className="flex items-start sm:items-center justify-between gap-3 flex-col sm:flex-row">
+            <TabsList className="w-full sm:w-auto overflow-x-auto">
               <TabsTrigger value="invoices">Faturas</TabsTrigger>
               <TabsTrigger value="expenses">Despesas</TabsTrigger>
               <TabsTrigger value="quotes">Orçamentos</TabsTrigger>
             </TabsList>
-            <div className="flex items-center gap-2">
-              <div className="relative">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative w-full sm:w-56">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)}
-                  className="pl-9 w-56 bg-card border-border" />
+                  className="pl-9 w-full bg-card border-border" />
               </div>
             </div>
           </div>

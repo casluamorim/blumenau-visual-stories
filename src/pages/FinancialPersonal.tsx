@@ -281,15 +281,15 @@ export default function FinancialPersonal() {
         </div>
 
         <Tabs defaultValue="income" className="space-y-4">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <TabsList>
+          <div className="flex items-start sm:items-center justify-between gap-3 flex-col sm:flex-row">
+            <TabsList className="w-full sm:w-auto">
               <TabsTrigger value="income">Receitas</TabsTrigger>
               <TabsTrigger value="expenses">Despesas</TabsTrigger>
             </TabsList>
-            <div className="relative">
+            <div className="relative w-full sm:w-56">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)}
-                className="pl-9 w-56 bg-card border-border" />
+                className="pl-9 w-full bg-card border-border" />
             </div>
           </div>
 
