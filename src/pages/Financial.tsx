@@ -866,10 +866,10 @@ export default function Financial() {
               </div>
               <div>
                 <Label>Projeto</Label>
-                <Select value={iProjectId} onValueChange={setIProjectId}>
+                <Select value={iProjectId || '__none__'} onValueChange={(v) => setIProjectId(v === '__none__' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="__none__">Nenhum</SelectItem>
                     {projects.filter(p => !iClientId || p.client_id === iClientId).map(p =>
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     )}
@@ -986,20 +986,20 @@ export default function Financial() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Cliente (opcional)</Label>
-                <Select value={eClientId} onValueChange={setEClientId}>
+                <Select value={eClientId || '__none__'} onValueChange={(v) => setEClientId(v === '__none__' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="__none__">Nenhum</SelectItem>
                     {clients.map(c => <SelectItem key={c.id} value={c.id}>{clientSelectLabel(c)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label>Projeto (opcional)</Label>
-                <Select value={eProjectId} onValueChange={setEProjectId}>
+                <Select value={eProjectId || '__none__'} onValueChange={(v) => setEProjectId(v === '__none__' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="__none__">Nenhum</SelectItem>
                     {projects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
