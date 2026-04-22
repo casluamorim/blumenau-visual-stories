@@ -580,7 +580,7 @@ export default function Financial() {
                     </TableRow>
                   )}
                 </TableBody>
-              </Table>
+              </Table></div>
             </Card>
           </TabsContent>
 
@@ -672,7 +672,7 @@ export default function Financial() {
                     </TableRow>
                   )}
                 </TableBody>
-              </Table>
+              </Table></div>
             </Card>
           </TabsContent>
 
@@ -741,7 +741,7 @@ export default function Financial() {
                     </TableRow>
                   )}
                 </TableBody>
-              </Table>
+              </Table></div>
             </Card>
           </TabsContent>
         </Tabs>
