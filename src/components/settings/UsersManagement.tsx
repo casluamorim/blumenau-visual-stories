@@ -198,15 +198,20 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
     }
   }
 
-  function genToken() {
-    const arr = new Uint8Array(24);
+  function generatePassword() {
+    const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+    const arr = new Uint8Array(14);
     crypto.getRandomValues(arr);
-    return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+    return Array.from(arr).map(b => charset[b % charset.length]).join('');
   }
 
-  async function createInvite() {
-    if (!newName.trim() || !newEmail.trim()) {
-      toast({ title: 'Preencha nome e e-mail', variant: 'destructive' });
+  async function createUserDirect() {
+    if (!newName.trim() || !newEmail.trim() || !newPassword.trim()) {
+      toast({ title: 'Preencha nome, e-mail e senha', variant: 'destructive' });
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast({ title: 'Senha curta', description: 'Use no mínimo 8 caracteres', variant: 'destructive' });
       return;
     }
 
@@ -214,7 +219,6 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
     const hasExistingUser = users.some(
       (u) => !u.is_invite && (u.email || '').toLowerCase() === normalizedEmail,
     );
-
     if (hasExistingUser) {
       toast({ title: 'E-mail já cadastrado', description: 'Já existe um usuário com este e-mail.', variant: 'destructive' });
       return;
@@ -222,41 +226,41 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
 
     setCreating(true);
     try {
-      const token = genToken();
-      const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase.functions.invoke('admin-create-user', {
+        body: {
+          email: normalizedEmail,
+          password: newPassword,
+          full_name: newName.trim(),
+          role: newRole,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
+      // Limpa convites pendentes antigos com o mesmo e-mail (se existirem)
       await db.from('user_invites').delete().eq('email', normalizedEmail).is('accepted_at', null);
 
-      const { data: inviteData, error: pErr } = await db.from('user_invites').insert({
-        full_name: newName.trim(),
-        email: normalizedEmail,
-        role: newRole,
-        token,
-        expires_at: expires,
-        invited_by: user?.id,
-      }).select('id').single();
-      if (pErr) throw pErr;
-
-      const link = buildInviteLink(token, newRole, normalizedEmail);
-      setGeneratedLink(link);
       await logAudit({
-        action: 'user.invited',
+        action: 'user.created',
         entityType: 'user',
-        entityId: inviteData?.id ?? null,
+        entityId: data?.user?.id ?? null,
         details: { full_name: newName.trim(), email: normalizedEmail, role: newRole },
       });
-      toast({ title: 'Convite criado', description: 'Copie o link e envie ao novo usuário' });
+      toast({ title: 'Usuário criado', description: 'Compartilhe o e-mail e a senha com o novo membro.' });
+      setOpenCreate(false);
+      resetCreate();
       await loadAll();
     } catch (e: any) {
-      toast({ title: 'Erro ao criar convite', description: e.message, variant: 'destructive' });
+      toast({ title: 'Erro ao criar usuário', description: e.message, variant: 'destructive' });
     } finally {
       setCreating(false);
     }
   }
 
   function resetCreate() {
-    setNewName(''); setNewEmail(''); setNewRole('editor'); setGeneratedLink(null);
+    setNewName(''); setNewEmail(''); setNewPassword(''); setShowPassword(false); setNewRole('editor');
   }
+
 
   async function copyLink(link: string) {
     await navigator.clipboard.writeText(link);
