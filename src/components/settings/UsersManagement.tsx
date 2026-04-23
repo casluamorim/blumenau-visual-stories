@@ -88,8 +88,9 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [newRole, setNewRole] = useState<AppRole>('editor');
-  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
 
   // assignments dialog
   const [openAssign, setOpenAssign] = useState(false);
@@ -197,15 +198,20 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
     }
   }
 
-  function genToken() {
-    const arr = new Uint8Array(24);
+  function generatePassword() {
+    const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+    const arr = new Uint8Array(14);
     crypto.getRandomValues(arr);
-    return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+    return Array.from(arr).map(b => charset[b % charset.length]).join('');
   }
 
-  async function createInvite() {
-    if (!newName.trim() || !newEmail.trim()) {
-      toast({ title: 'Preencha nome e e-mail', variant: 'destructive' });
+  async function createUserDirect() {
+    if (!newName.trim() || !newEmail.trim() || !newPassword.trim()) {
+      toast({ title: 'Preencha nome, e-mail e senha', variant: 'destructive' });
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast({ title: 'Senha curta', description: 'Use no mínimo 8 caracteres', variant: 'destructive' });
       return;
     }
 
@@ -213,7 +219,6 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
     const hasExistingUser = users.some(
       (u) => !u.is_invite && (u.email || '').toLowerCase() === normalizedEmail,
     );
-
     if (hasExistingUser) {
       toast({ title: 'E-mail já cadastrado', description: 'Já existe um usuário com este e-mail.', variant: 'destructive' });
       return;
@@ -221,41 +226,41 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
 
     setCreating(true);
     try {
-      const token = genToken();
-      const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase.functions.invoke('admin-create-user', {
+        body: {
+          email: normalizedEmail,
+          password: newPassword,
+          full_name: newName.trim(),
+          role: newRole,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
+      // Limpa convites pendentes antigos com o mesmo e-mail (se existirem)
       await db.from('user_invites').delete().eq('email', normalizedEmail).is('accepted_at', null);
 
-      const { data: inviteData, error: pErr } = await db.from('user_invites').insert({
-        full_name: newName.trim(),
-        email: normalizedEmail,
-        role: newRole,
-        token,
-        expires_at: expires,
-        invited_by: user?.id,
-      }).select('id').single();
-      if (pErr) throw pErr;
-
-      const link = buildInviteLink(token, newRole, normalizedEmail);
-      setGeneratedLink(link);
       await logAudit({
-        action: 'user.invited',
+        action: 'user.created',
         entityType: 'user',
-        entityId: inviteData?.id ?? null,
+        entityId: data?.user?.id ?? null,
         details: { full_name: newName.trim(), email: normalizedEmail, role: newRole },
       });
-      toast({ title: 'Convite criado', description: 'Copie o link e envie ao novo usuário' });
+      toast({ title: 'Usuário criado', description: 'Compartilhe o e-mail e a senha com o novo membro.' });
+      setOpenCreate(false);
+      resetCreate();
       await loadAll();
     } catch (e: any) {
-      toast({ title: 'Erro ao criar convite', description: e.message, variant: 'destructive' });
+      toast({ title: 'Erro ao criar usuário', description: e.message, variant: 'destructive' });
     } finally {
       setCreating(false);
     }
   }
 
   function resetCreate() {
-    setNewName(''); setNewEmail(''); setNewRole('editor'); setGeneratedLink(null);
+    setNewName(''); setNewEmail(''); setNewPassword(''); setShowPassword(false); setNewRole('editor');
   }
+
 
   async function copyLink(link: string) {
     await navigator.clipboard.writeText(link);
@@ -464,59 +469,80 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
               </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Convidar novo usuário</DialogTitle>
+                <DialogTitle>Criar novo usuário</DialogTitle>
                 <DialogDescription>
-                  Será gerado um link de convite válido por 7 dias. Envie-o ao novo membro para que ele crie a senha.
+                  Defina e-mail, senha e função. O usuário poderá entrar imediatamente com essas credenciais.
                 </DialogDescription>
               </DialogHeader>
-              {!generatedLink ? (
-                <div className="space-y-4">
-                  <div>
-                    <Label>Nome completo</Label>
-                    <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="João Silva" />
-                  </div>
-                  <div>
-                    <Label>E-mail</Label>
-                    <Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="joao@agencia.com" />
-                  </div>
-                  <div>
-                    <Label>Função</Label>
-                    <Select value={newRole} onValueChange={v => setNewRole(v as AppRole)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {ROLE_OPTIONS.map(r => (
-                          <SelectItem key={r.value} value={r.value}>
-                            <div className="flex flex-col">
-                              <span>{r.label}</span>
-                              <span className="text-xs text-muted-foreground">{r.description}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <div className="space-y-4">
+                <div>
+                  <Label>Nome completo</Label>
+                  <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="João Silva" />
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">Link de convite (envie para o usuário):</p>
+                <div>
+                  <Label>E-mail</Label>
+                  <Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="joao@agencia.com" />
+                </div>
+                <div>
+                  <Label>Senha (mínimo 8 caracteres)</Label>
                   <div className="flex gap-2">
-                    <Input value={generatedLink} readOnly className="font-mono text-xs" />
-                    <Button variant="outline" onClick={() => copyLink(generatedLink)}>
-                      <Copy className="h-4 w-4" />
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      placeholder="Defina uma senha inicial"
+                      className="font-mono"
+                    />
+                    <Button type="button" variant="outline" size="sm" onClick={() => setShowPassword(s => !s)}>
+                      {showPassword ? 'Ocultar' : 'Mostrar'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setNewPassword(generatePassword()); setShowPassword(true); }}
+                    >
+                      Gerar
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">Válido por 7 dias.</p>
+                  {newPassword && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyLink(newPassword)}
+                      >
+                        <Copy className="mr-1 h-3 w-3" /> Copiar senha
+                      </Button>
+                      <span className="text-xs text-muted-foreground">
+                        Compartilhe com o novo usuário por canal seguro.
+                      </span>
+                    </div>
+                  )}
                 </div>
-              )}
+                <div>
+                  <Label>Função</Label>
+                  <Select value={newRole} onValueChange={v => setNewRole(v as AppRole)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {ROLE_OPTIONS.map(r => (
+                        <SelectItem key={r.value} value={r.value}>
+                          <div className="flex flex-col">
+                            <span>{r.label}</span>
+                            <span className="text-xs text-muted-foreground">{r.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <DialogFooter>
-                {!generatedLink ? (
-                  <Button onClick={createInvite} disabled={creating}>
-                    {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Gerar convite
-                  </Button>
-                ) : (
-                  <Button onClick={() => { setOpenCreate(false); resetCreate(); }}>Concluir</Button>
-                )}
+                <Button onClick={createUserDirect} disabled={creating}>
+                  {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Criar usuário
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
