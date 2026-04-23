@@ -453,10 +453,15 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
             <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" />Usuários da agência</CardTitle>
             <CardDescription>Gerencie membros, funções e acesso a clientes</CardDescription>
           </div>
-          <Dialog open={openCreate} onOpenChange={(o) => { setOpenCreate(o); if (!o) resetCreate(); }}>
-            <DialogTrigger asChild>
-              <Button><UserPlus className="mr-2 h-4 w-4" />Novo usuário</Button>
-            </DialogTrigger>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setOpenQa(true)} disabled={runningQa}>
+              {runningQa ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FlaskConical className="mr-2 h-4 w-4" />}
+              Testar RLS
+            </Button>
+            <Dialog open={openCreate} onOpenChange={(o) => { setOpenCreate(o); if (!o) resetCreate(); }}>
+              <DialogTrigger asChild>
+                <Button><UserPlus className="mr-2 h-4 w-4" />Novo usuário</Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Convidar novo usuário</DialogTitle>
