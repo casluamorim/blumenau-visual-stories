@@ -97,6 +97,39 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loadingAssign, setLoadingAssign] = useState(false);
 
+  // RLS QA tests
+  const [openQa, setOpenQa] = useState(false);
+  const [runningQa, setRunningQa] = useState(false);
+  const [qaResults, setQaResults] = useState<{
+    ok: boolean;
+    error: string | null;
+    summary: { total: number; passed: number; failed: number };
+    results: { name: string; passed: boolean; detail?: string }[];
+  } | null>(null);
+
+  async function runRlsQaTests() {
+    setRunningQa(true);
+    setQaResults(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('qa-rls-tests', { body: {} });
+      if (error) throw error;
+      setQaResults(data);
+      if (data?.ok) {
+        toast({ title: 'Testes de RLS passaram', description: `${data.summary.passed}/${data.summary.total}` });
+      } else {
+        toast({
+          title: 'Testes de RLS falharam',
+          description: data?.error || `${data?.summary?.failed ?? '?'} falha(s)`,
+          variant: 'destructive',
+        });
+      }
+    } catch (e: any) {
+      toast({ title: 'Erro ao rodar testes', description: e.message, variant: 'destructive' });
+    } finally {
+      setRunningQa(false);
+    }
+  }
+
   useEffect(() => { if (isAdmin) loadAll(); else setLoading(false); }, [isAdmin]);
 
   function buildInviteLink(token: string, role: AppRole, email: string) {
