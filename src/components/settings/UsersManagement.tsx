@@ -21,7 +21,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
-  Loader2, UserPlus, Copy, Power, Link2, Users, Trash2, Shield,
+  Loader2, UserPlus, Copy, Power, Link2, Users, Trash2, Shield, FlaskConical,
+  CheckCircle2, XCircle,
 } from 'lucide-react';
 import { logAudit } from '@/lib/auditLog';
 
