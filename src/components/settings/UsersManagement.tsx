@@ -21,7 +21,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
-  Loader2, UserPlus, Copy, Power, Link2, Users, Trash2, Shield,
+  Loader2, UserPlus, Copy, Power, Link2, Users, Trash2, Shield, FlaskConical,
+  CheckCircle2, XCircle,
 } from 'lucide-react';
 import { logAudit } from '@/lib/auditLog';
 
@@ -95,6 +96,39 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
   const [assignTarget, setAssignTarget] = useState<UserRow | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loadingAssign, setLoadingAssign] = useState(false);
+
+  // RLS QA tests
+  const [openQa, setOpenQa] = useState(false);
+  const [runningQa, setRunningQa] = useState(false);
+  const [qaResults, setQaResults] = useState<{
+    ok: boolean;
+    error: string | null;
+    summary: { total: number; passed: number; failed: number };
+    results: { name: string; passed: boolean; detail?: string }[];
+  } | null>(null);
+
+  async function runRlsQaTests() {
+    setRunningQa(true);
+    setQaResults(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('qa-rls-tests', { body: {} });
+      if (error) throw error;
+      setQaResults(data);
+      if (data?.ok) {
+        toast({ title: 'Testes de RLS passaram', description: `${data.summary.passed}/${data.summary.total}` });
+      } else {
+        toast({
+          title: 'Testes de RLS falharam',
+          description: data?.error || `${data?.summary?.failed ?? '?'} falha(s)`,
+          variant: 'destructive',
+        });
+      }
+    } catch (e: any) {
+      toast({ title: 'Erro ao rodar testes', description: e.message, variant: 'destructive' });
+    } finally {
+      setRunningQa(false);
+    }
+  }
 
   useEffect(() => { if (isAdmin) loadAll(); else setLoading(false); }, [isAdmin]);
 
@@ -419,10 +453,15 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
             <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" />Usuários da agência</CardTitle>
             <CardDescription>Gerencie membros, funções e acesso a clientes</CardDescription>
           </div>
-          <Dialog open={openCreate} onOpenChange={(o) => { setOpenCreate(o); if (!o) resetCreate(); }}>
-            <DialogTrigger asChild>
-              <Button><UserPlus className="mr-2 h-4 w-4" />Novo usuário</Button>
-            </DialogTrigger>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setOpenQa(true)} disabled={runningQa}>
+              {runningQa ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FlaskConical className="mr-2 h-4 w-4" />}
+              Testar RLS
+            </Button>
+            <Dialog open={openCreate} onOpenChange={(o) => { setOpenCreate(o); if (!o) resetCreate(); }}>
+              <DialogTrigger asChild>
+                <Button><UserPlus className="mr-2 h-4 w-4" />Novo usuário</Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Convidar novo usuário</DialogTitle>
@@ -481,6 +520,7 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -650,6 +690,69 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* RLS QA Test results dialog */}
+      <Dialog open={openQa} onOpenChange={setOpenQa}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FlaskConical className="h-5 w-5" /> Testes de RLS por papel
+            </DialogTitle>
+            <DialogDescription>
+              Cria usuários temporários (admin/financeiro/social_media), valida o que cada um enxerga e remove tudo no final.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <Button onClick={runRlsQaTests} disabled={runningQa} className="w-full">
+              {runningQa ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FlaskConical className="mr-2 h-4 w-4" />}
+              {runningQa ? 'Executando…' : 'Rodar testes agora'}
+            </Button>
+
+            {qaResults && (
+              <div className="space-y-3">
+                <div className={`rounded-lg border p-3 ${qaResults.ok ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-destructive/30 bg-destructive/5'}`}>
+                  <div className="flex items-center gap-2">
+                    {qaResults.ok ? (
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    ) : (
+                      <XCircle className="h-4 w-4 text-destructive" />
+                    )}
+                    <p className="text-sm font-medium">
+                      {qaResults.summary.passed}/{qaResults.summary.total} passaram
+                      {qaResults.summary.failed > 0 ? ` • ${qaResults.summary.failed} falha(s)` : ''}
+                    </p>
+                  </div>
+                  {qaResults.error && (
+                    <p className="text-xs text-destructive mt-1">Erro: {qaResults.error}</p>
+                  )}
+                </div>
+
+                <div className="max-h-[400px] overflow-y-auto space-y-1.5">
+                  {qaResults.results.map((r, i) => (
+                    <div
+                      key={i}
+                      className={`flex items-start gap-2 rounded-md border p-2 text-xs ${
+                        r.passed ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-destructive/30 bg-destructive/5'
+                      }`}
+                    >
+                      {r.passed ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0 text-emerald-500" />
+                      ) : (
+                        <XCircle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-destructive" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-foreground">{r.name}</p>
+                        {r.detail && <p className="text-muted-foreground">{r.detail}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
