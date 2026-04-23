@@ -88,8 +88,9 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [newRole, setNewRole] = useState<AppRole>('editor');
-  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
 
   // assignments dialog
   const [openAssign, setOpenAssign] = useState(false);
