@@ -469,59 +469,80 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
               </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Convidar novo usuário</DialogTitle>
+                <DialogTitle>Criar novo usuário</DialogTitle>
                 <DialogDescription>
-                  Será gerado um link de convite válido por 7 dias. Envie-o ao novo membro para que ele crie a senha.
+                  Defina e-mail, senha e função. O usuário poderá entrar imediatamente com essas credenciais.
                 </DialogDescription>
               </DialogHeader>
-              {!generatedLink ? (
-                <div className="space-y-4">
-                  <div>
-                    <Label>Nome completo</Label>
-                    <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="João Silva" />
-                  </div>
-                  <div>
-                    <Label>E-mail</Label>
-                    <Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="joao@agencia.com" />
-                  </div>
-                  <div>
-                    <Label>Função</Label>
-                    <Select value={newRole} onValueChange={v => setNewRole(v as AppRole)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {ROLE_OPTIONS.map(r => (
-                          <SelectItem key={r.value} value={r.value}>
-                            <div className="flex flex-col">
-                              <span>{r.label}</span>
-                              <span className="text-xs text-muted-foreground">{r.description}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <div className="space-y-4">
+                <div>
+                  <Label>Nome completo</Label>
+                  <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="João Silva" />
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">Link de convite (envie para o usuário):</p>
+                <div>
+                  <Label>E-mail</Label>
+                  <Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="joao@agencia.com" />
+                </div>
+                <div>
+                  <Label>Senha (mínimo 8 caracteres)</Label>
                   <div className="flex gap-2">
-                    <Input value={generatedLink} readOnly className="font-mono text-xs" />
-                    <Button variant="outline" onClick={() => copyLink(generatedLink)}>
-                      <Copy className="h-4 w-4" />
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      placeholder="Defina uma senha inicial"
+                      className="font-mono"
+                    />
+                    <Button type="button" variant="outline" size="sm" onClick={() => setShowPassword(s => !s)}>
+                      {showPassword ? 'Ocultar' : 'Mostrar'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setNewPassword(generatePassword()); setShowPassword(true); }}
+                    >
+                      Gerar
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">Válido por 7 dias.</p>
+                  {newPassword && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyLink(newPassword)}
+                      >
+                        <Copy className="mr-1 h-3 w-3" /> Copiar senha
+                      </Button>
+                      <span className="text-xs text-muted-foreground">
+                        Compartilhe com o novo usuário por canal seguro.
+                      </span>
+                    </div>
+                  )}
                 </div>
-              )}
+                <div>
+                  <Label>Função</Label>
+                  <Select value={newRole} onValueChange={v => setNewRole(v as AppRole)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {ROLE_OPTIONS.map(r => (
+                        <SelectItem key={r.value} value={r.value}>
+                          <div className="flex flex-col">
+                            <span>{r.label}</span>
+                            <span className="text-xs text-muted-foreground">{r.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <DialogFooter>
-                {!generatedLink ? (
-                  <Button onClick={createInvite} disabled={creating}>
-                    {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Gerar convite
-                  </Button>
-                ) : (
-                  <Button onClick={() => { setOpenCreate(false); resetCreate(); }}>Concluir</Button>
-                )}
+                <Button onClick={createUserDirect} disabled={creating}>
+                  {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Criar usuário
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
