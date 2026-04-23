@@ -520,6 +520,7 @@ export function UsersManagement({ isAdmin }: { isAdmin: boolean }) {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
