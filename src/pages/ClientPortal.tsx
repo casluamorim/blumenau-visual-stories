@@ -119,13 +119,26 @@ export default function ClientPortal() {
     for (const project of projectsData ?? []) {
       const { data: contents } = await supabase
         .from('contents')
-        .select('id, title, type, status, priority, revision_count, revision_limit, description, project_id, checklist')
+        .select('id, title, type, status, priority, revision_count, revision_limit, description, project_id, checklist, drive_url')
         .eq('project_id', project.id)
         .order('created_at', { ascending: false });
 
+      const contentsWithFiles: ContentData[] = [];
+      for (const c of contents ?? []) {
+        const { data: files } = await supabase.storage
+          .from('content-files')
+          .list(`${project.id}/${c.id}`);
+        const mapped: ContentFile[] = (files ?? []).map(f => ({
+          name: f.name,
+          url: supabase.storage.from('content-files')
+            .getPublicUrl(`${project.id}/${c.id}/${f.name}`).data.publicUrl,
+        }));
+        contentsWithFiles.push({ ...(c as any), files: mapped });
+      }
+
       projectsWithContents.push({
         ...project,
-        contents: contents ?? [],
+        contents: contentsWithFiles,
       });
     }
 
