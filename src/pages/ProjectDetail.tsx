@@ -15,8 +15,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import {
   Plus, ArrowLeft, CheckCircle, AlertTriangle, FileText, Upload,
-  Image, Video, Trash2, ExternalLink, Loader2
+  Image, Video, Trash2, ExternalLink, Loader2, Link2
 } from 'lucide-react';
+import { getDrivePreviewUrl, isDriveUrl } from '@/lib/drive';
 import type { Database } from '@/integrations/supabase/types';
 
 type Content = Database['public']['Tables']['contents']['Row'];
