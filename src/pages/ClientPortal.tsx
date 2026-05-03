@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import {
   FileText, CheckCircle, XCircle, Clock, MessageSquare,
@@ -481,120 +482,216 @@ function ContentApprovalCard({
   onApprove: () => void;
   onRequestRevision: () => void;
 }) {
+  const [lightbox, setLightbox] = useState<{ url: string; name: string; type: 'image' | 'video' } | null>(null);
+  const drivePreview = content.drive_url ? getDrivePreviewUrl(content.drive_url) : null;
+  const images = (content.files ?? []).filter(f => /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(f.name));
+  const videos = (content.files ?? []).filter(f => /\.(mp4|mov|webm|avi|mkv)$/i.test(f.name));
+  const others = (content.files ?? []).filter(f =>
+    !/\.(jpg|jpeg|png|gif|webp|svg|mp4|mov|webm|avi|mkv)$/i.test(f.name)
+  );
+
   return (
-    <Card className="border-slate-200 bg-white overflow-hidden">
-      <div className="h-1 bg-amber-400" />
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-lg text-slate-800">{content.title}</CardTitle>
-            <p className="text-sm text-slate-500 mt-1">
-              {projectName} • {typeLabels[content.type] ?? content.type}
-            </p>
+    <>
+      <Card className="border-slate-200 bg-white overflow-hidden">
+        <div className="h-1 bg-amber-400" />
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="text-lg text-slate-800">{content.title}</CardTitle>
+              <p className="text-sm text-slate-500 mt-1">
+                {projectName} • {typeLabels[content.type] ?? content.type}
+              </p>
+            </div>
+            <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">
+              Aguardando aprovação
+            </Badge>
           </div>
-          <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">
-            Aguardando aprovação
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Drive video preview (opens directly) */}
-        {content.drive_url && getDrivePreviewUrl(content.drive_url) && (
-          <div className="rounded-lg overflow-hidden border border-slate-200 bg-black aspect-video">
-            <iframe
-              src={getDrivePreviewUrl(content.drive_url)!}
-              className="w-full h-full"
-              allow="autoplay"
-              allowFullScreen
-              title={content.title}
-            />
-          </div>
-        )}
-        {content.drive_url && !getDrivePreviewUrl(content.drive_url) && (
-          <a href={content.drive_url} target="_blank" rel="noopener noreferrer"
-            className="text-sm text-violet-600 underline inline-flex items-center gap-1">
-            <ExternalLink className="h-3 w-3" /> Abrir vídeo no Drive
-          </a>
-        )}
-
-        {/* Image / file gallery */}
-        {content.files && content.files.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {content.files.map(f => {
-              const isImg = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(f.name);
-              const isVid = /\.(mp4|mov|webm|avi|mkv)$/i.test(f.name);
-              return (
-                <a key={f.name} href={f.url} target="_blank" rel="noopener noreferrer"
-                  className="block rounded-lg overflow-hidden border border-slate-200 bg-slate-50 hover:shadow-md transition-shadow">
-                  {isImg ? (
-                    <img src={f.url} alt={f.name} className="w-full h-40 object-cover" />
-                  ) : isVid ? (
-                    <video src={f.url} controls className="w-full h-40 object-cover" />
-                  ) : (
-                    <div className="w-full h-40 flex items-center justify-center text-slate-400">
-                      <FileText className="h-8 w-8" />
-                    </div>
-                  )}
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Google Drive video preview */}
+          {content.drive_url && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                  <Video className="h-3 w-3" /> Vídeo (Google Drive)
+                </p>
+                <a
+                  href={content.drive_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-violet-600 hover:underline inline-flex items-center gap-1"
+                >
+                  <ExternalLink className="h-3 w-3" /> Abrir no Drive
                 </a>
-              );
-            })}
-          </div>
-        )}
-
-        {content.description && (
-          <p className="text-sm text-slate-600 bg-slate-50 rounded-lg p-3">{content.description}</p>
-        )}
-
-        {/* Checklist display */}
-        {content.checklist && Array.isArray(content.checklist) && content.checklist.length > 0 && (
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-slate-500">Checklist da equipe:</p>
-            <div className="space-y-1">
-              {(content.checklist as any[]).map((item: any) => (
-                <div key={item.id} className="flex items-center gap-2 text-sm">
-                  {item.checked ? (
-                    <CheckCircle className="h-4 w-4 text-emerald-500" />
-                  ) : (
-                    <Clock className="h-4 w-4 text-slate-300" />
-                  )}
-                  <span className={item.checked ? 'text-slate-600' : 'text-slate-400'}>{item.label}</span>
+              </div>
+              {drivePreview ? (
+                <div className="rounded-lg overflow-hidden border border-slate-200 bg-black aspect-video">
+                  <iframe
+                    src={drivePreview}
+                    className="w-full h-full"
+                    allow="autoplay; fullscreen"
+                    allowFullScreen
+                    title={content.title}
+                  />
                 </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                  <Video className="h-8 w-8 text-slate-400 mx-auto mb-2" />
+                  <p className="text-sm text-slate-500 mb-3">
+                    Não conseguimos exibir este link aqui. Abra direto no Drive.
+                  </p>
+                  <a
+                    href={content.drive_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-sm font-medium text-violet-600 hover:text-violet-700"
+                  >
+                    <ExternalLink className="h-4 w-4" /> Ver vídeo no Google Drive
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Image gallery (thumbnails -> modal) */}
+          {images.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-slate-500 mb-2">
+                Imagens ({images.length})
+              </p>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {images.map(f => (
+                  <button
+                    key={f.name}
+                    type="button"
+                    onClick={() => setLightbox({ url: f.url, name: f.name, type: 'image' })}
+                    className="group relative block rounded-lg overflow-hidden border border-slate-200 bg-slate-50 hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  >
+                    <img
+                      src={f.url}
+                      alt={f.name}
+                      loading="lazy"
+                      className="w-full h-28 object-cover group-hover:scale-105 transition-transform"
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Video files */}
+          {videos.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-slate-500 mb-2">Vídeos ({videos.length})</p>
+              <div className="grid grid-cols-2 gap-2">
+                {videos.map(f => (
+                  <button
+                    key={f.name}
+                    type="button"
+                    onClick={() => setLightbox({ url: f.url, name: f.name, type: 'video' })}
+                    className="group block rounded-lg overflow-hidden border border-slate-200 bg-black focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  >
+                    <video src={f.url} className="w-full h-32 object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Other files */}
+          {others.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {others.map(f => (
+                <a
+                  key={f.name}
+                  href={f.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600"
+                >
+                  <FileText className="h-3 w-3" />
+                  {f.name.replace(/^\d+_/, '')}
+                </a>
               ))}
             </div>
+          )}
+
+          {content.description && (
+            <p className="text-sm text-slate-600 bg-slate-50 rounded-lg p-3">{content.description}</p>
+          )}
+
+          {/* Checklist display */}
+          {content.checklist && Array.isArray(content.checklist) && content.checklist.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-slate-500">Checklist da equipe:</p>
+              <div className="space-y-1">
+                {(content.checklist as any[]).map((item: any) => (
+                  <div key={item.id} className="flex items-center gap-2 text-sm">
+                    {item.checked ? (
+                      <CheckCircle className="h-4 w-4 text-emerald-500" />
+                    ) : (
+                      <Clock className="h-4 w-4 text-slate-300" />
+                    )}
+                    <span className={item.checked ? 'text-slate-600' : 'text-slate-400'}>{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Comment for revision */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-600 flex items-center gap-1">
+              <MessageSquare className="h-4 w-4" /> Comentário (para revisão)
+            </label>
+            <Textarea
+              placeholder="Descreva o que precisa ser ajustado..."
+              value={comment}
+              onChange={e => onCommentChange(e.target.value)}
+              className="border-slate-200 bg-slate-50 text-slate-800 placeholder:text-slate-400 resize-none"
+              rows={2}
+            />
           </div>
-        )}
 
-        {/* Comment for revision */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-600 flex items-center gap-1">
-            <MessageSquare className="h-4 w-4" /> Comentário (para revisão)
-          </label>
-          <Textarea
-            placeholder="Descreva o que precisa ser ajustado..."
-            value={comment}
-            onChange={e => onCommentChange(e.target.value)}
-            className="border-slate-200 bg-slate-50 text-slate-800 placeholder:text-slate-400 resize-none"
-            rows={2}
-          />
-        </div>
+          {/* Action buttons */}
+          <div className="flex gap-3 pt-2">
+            <Button
+              onClick={onApprove}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              <CheckCircle className="mr-2 h-4 w-4" /> Aprovar
+            </Button>
+            <Button
+              onClick={onRequestRevision}
+              variant="outline"
+              className="flex-1 border-amber-300 text-amber-600 hover:bg-amber-50"
+            >
+              <Send className="mr-2 h-4 w-4" /> Solicitar Revisão
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Action buttons */}
-        <div className="flex gap-3 pt-2">
-          <Button
-            onClick={onApprove}
-            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-          >
-            <CheckCircle className="mr-2 h-4 w-4" /> Aprovar
-          </Button>
-          <Button
-            onClick={onRequestRevision}
-            variant="outline"
-            className="flex-1 border-amber-300 text-amber-600 hover:bg-amber-50"
-          >
-            <Send className="mr-2 h-4 w-4" /> Solicitar Revisão
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      {/* Lightbox modal */}
+      <Dialog open={!!lightbox} onOpenChange={open => !open && setLightbox(null)}>
+        <DialogContent className="max-w-5xl bg-black border-slate-800 p-2">
+          {lightbox?.type === 'image' && (
+            <img
+              src={lightbox.url}
+              alt={lightbox.name}
+              className="w-full max-h-[85vh] object-contain rounded"
+            />
+          )}
+          {lightbox?.type === 'video' && (
+            <video
+              src={lightbox.url}
+              controls
+              autoPlay
+              className="w-full max-h-[85vh] rounded"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
