@@ -9,8 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import {
   FileText, CheckCircle, XCircle, Clock, MessageSquare,
-  FolderKanban, Send, AlertTriangle, Building2, DollarSign
+  FolderKanban, Send, AlertTriangle, Building2, DollarSign, Video, ExternalLink
 } from 'lucide-react';
+import { getDrivePreviewUrl } from '@/lib/drive';
 
 const contentStatusConfig: Record<string, { label: string; color: string; icon: any }> = {
   draft: { label: 'Rascunho', color: 'bg-gray-500/10 text-gray-400 border-gray-500/20', icon: Clock },
