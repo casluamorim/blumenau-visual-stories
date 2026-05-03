@@ -469,6 +469,49 @@ function ContentApprovalCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Drive video preview (opens directly) */}
+        {content.drive_url && getDrivePreviewUrl(content.drive_url) && (
+          <div className="rounded-lg overflow-hidden border border-slate-200 bg-black aspect-video">
+            <iframe
+              src={getDrivePreviewUrl(content.drive_url)!}
+              className="w-full h-full"
+              allow="autoplay"
+              allowFullScreen
+              title={content.title}
+            />
+          </div>
+        )}
+        {content.drive_url && !getDrivePreviewUrl(content.drive_url) && (
+          <a href={content.drive_url} target="_blank" rel="noopener noreferrer"
+            className="text-sm text-violet-600 underline inline-flex items-center gap-1">
+            <ExternalLink className="h-3 w-3" /> Abrir vídeo no Drive
+          </a>
+        )}
+
+        {/* Image / file gallery */}
+        {content.files && content.files.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {content.files.map(f => {
+              const isImg = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(f.name);
+              const isVid = /\.(mp4|mov|webm|avi|mkv)$/i.test(f.name);
+              return (
+                <a key={f.name} href={f.url} target="_blank" rel="noopener noreferrer"
+                  className="block rounded-lg overflow-hidden border border-slate-200 bg-slate-50 hover:shadow-md transition-shadow">
+                  {isImg ? (
+                    <img src={f.url} alt={f.name} className="w-full h-40 object-cover" />
+                  ) : isVid ? (
+                    <video src={f.url} controls className="w-full h-40 object-cover" />
+                  ) : (
+                    <div className="w-full h-40 flex items-center justify-center text-slate-400">
+                      <FileText className="h-8 w-8" />
+                    </div>
+                  )}
+                </a>
+              );
+            })}
+          </div>
+        )}
+
         {content.description && (
           <p className="text-sm text-slate-600 bg-slate-50 rounded-lg p-3">{content.description}</p>
         )}
