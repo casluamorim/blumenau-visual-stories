@@ -98,6 +98,7 @@ export default function ProjectDetail() {
     }
     const { error } = await supabase.from('contents').insert({
       ...form,
+      drive_url: form.drive_url.trim() || null,
       project_id: id!,
       deadline: form.deadline || null,
       checklist: defaultChecklist,
@@ -105,7 +106,7 @@ export default function ProjectDetail() {
     });
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
     toast({ title: 'Conteúdo criado!' });
-    setForm({ title: '', type: 'photo', priority: 'medium', deadline: '', revision_limit: 3, description: '' });
+    setForm({ title: '', type: 'photo', priority: 'medium', deadline: '', revision_limit: 3, description: '', drive_url: '' });
     setDialogOpen(false);
     loadData();
   }
