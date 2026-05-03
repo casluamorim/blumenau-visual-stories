@@ -15,8 +15,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import {
   Plus, ArrowLeft, CheckCircle, AlertTriangle, FileText, Upload,
-  Image, Video, Trash2, ExternalLink, Loader2
+  Image, Video, Trash2, ExternalLink, Loader2, Link2
 } from 'lucide-react';
+import { getDrivePreviewUrl, isDriveUrl } from '@/lib/drive';
 import type { Database } from '@/integrations/supabase/types';
 
 type Content = Database['public']['Tables']['contents']['Row'];
@@ -59,7 +60,7 @@ export default function ProjectDetail() {
 
   const [form, setForm] = useState({
     title: '', type: 'photo' as any, priority: 'medium' as any, deadline: '',
-    revision_limit: 3, description: '',
+    revision_limit: 3, description: '', drive_url: '',
   });
 
   useEffect(() => { if (id) loadData(); }, [id]);
@@ -97,6 +98,7 @@ export default function ProjectDetail() {
     }
     const { error } = await supabase.from('contents').insert({
       ...form,
+      drive_url: form.drive_url.trim() || null,
       project_id: id!,
       deadline: form.deadline || null,
       checklist: defaultChecklist,
@@ -104,7 +106,7 @@ export default function ProjectDetail() {
     });
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
     toast({ title: 'Conteúdo criado!' });
-    setForm({ title: '', type: 'photo', priority: 'medium', deadline: '', revision_limit: 3, description: '' });
+    setForm({ title: '', type: 'photo', priority: 'medium', deadline: '', revision_limit: 3, description: '', drive_url: '' });
     setDialogOpen(false);
     loadData();
   }
@@ -218,6 +220,18 @@ export default function ProjectDetail() {
                   <div><Label>Limite revisões</Label><Input type="number" min={1} value={form.revision_limit} onChange={e => setForm({ ...form, revision_limit: Number(e.target.value) })} className="bg-muted border-border" /></div>
                 </div>
                 <div><Label>Descrição</Label><Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="bg-muted border-border" /></div>
+                <div>
+                  <Label className="flex items-center gap-1"><Link2 className="h-3 w-3" /> Link do Google Drive (vídeo)</Label>
+                  <Input
+                    placeholder="https://drive.google.com/file/d/.../view"
+                    value={form.drive_url}
+                    onChange={e => setForm({ ...form, drive_url: e.target.value })}
+                    className="bg-muted border-border"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Cole o link de compartilhamento do Drive. O vídeo abrirá embutido para o cliente.
+                  </p>
+                </div>
                 <Button onClick={handleCreateContent} className="w-full">Criar Conteúdo</Button>
               </div>
             </DialogContent>
@@ -325,6 +339,30 @@ export default function ProjectDetail() {
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Drive video preview */}
+                  {(content as any).drive_url && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                        <Video className="h-3 w-3" /> Vídeo (Google Drive)
+                      </p>
+                      {getDrivePreviewUrl((content as any).drive_url) ? (
+                        <div className="rounded-lg overflow-hidden border border-border bg-black aspect-video">
+                          <iframe
+                            src={getDrivePreviewUrl((content as any).drive_url)!}
+                            className="w-full h-full"
+                            allow="autoplay"
+                            allowFullScreen
+                          />
+                        </div>
+                      ) : (
+                        <a href={(content as any).drive_url} target="_blank" rel="noopener noreferrer"
+                          className="text-sm text-primary underline inline-flex items-center gap-1">
+                          <ExternalLink className="h-3 w-3" /> Abrir no Drive
+                        </a>
+                      )}
                     </div>
                   )}
 

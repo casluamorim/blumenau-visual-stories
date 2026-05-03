@@ -9,8 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import {
   FileText, CheckCircle, XCircle, Clock, MessageSquare,
-  FolderKanban, Send, AlertTriangle, Building2, DollarSign
+  FolderKanban, Send, AlertTriangle, Building2, DollarSign, Video, ExternalLink
 } from 'lucide-react';
+import { getDrivePreviewUrl } from '@/lib/drive';
 
 const contentStatusConfig: Record<string, { label: string; color: string; icon: any }> = {
   draft: { label: 'Rascunho', color: 'bg-gray-500/10 text-gray-400 border-gray-500/20', icon: Clock },
@@ -38,6 +39,11 @@ interface ProjectData {
   contents: ContentData[];
 }
 
+interface ContentFile {
+  name: string;
+  url: string;
+}
+
 interface ContentData {
   id: string;
   title: string;
@@ -49,6 +55,8 @@ interface ContentData {
   description: string | null;
   project_id: string;
   checklist: any;
+  drive_url: string | null;
+  files?: ContentFile[];
 }
 
 export default function ClientPortal() {
@@ -111,13 +119,26 @@ export default function ClientPortal() {
     for (const project of projectsData ?? []) {
       const { data: contents } = await supabase
         .from('contents')
-        .select('id, title, type, status, priority, revision_count, revision_limit, description, project_id, checklist')
+        .select('id, title, type, status, priority, revision_count, revision_limit, description, project_id, checklist, drive_url')
         .eq('project_id', project.id)
         .order('created_at', { ascending: false });
 
+      const contentsWithFiles: ContentData[] = [];
+      for (const c of contents ?? []) {
+        const { data: files } = await supabase.storage
+          .from('content-files')
+          .list(`${project.id}/${c.id}`);
+        const mapped: ContentFile[] = (files ?? []).map(f => ({
+          name: f.name,
+          url: supabase.storage.from('content-files')
+            .getPublicUrl(`${project.id}/${c.id}/${f.name}`).data.publicUrl,
+        }));
+        contentsWithFiles.push({ ...(c as any), files: mapped });
+      }
+
       projectsWithContents.push({
         ...project,
-        contents: contents ?? [],
+        contents: contentsWithFiles,
       });
     }
 
@@ -322,15 +343,44 @@ export default function ClientPortal() {
                 const StatusIcon = status.icon;
                 return (
                   <Card key={content.id} className="border-slate-200 bg-white hover:shadow-sm transition-shadow">
-                    <CardContent className="flex items-center gap-4 p-4">
-                      <StatusIcon className={`h-5 w-5 shrink-0 ${status.color.includes('emerald') ? 'text-emerald-500' : status.color.includes('amber') ? 'text-amber-500' : status.color.includes('purple') ? 'text-purple-500' : 'text-slate-400'}`} />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-800 truncate">{content.title}</p>
-                        <p className="text-sm text-slate-500">
-                          {projects.find(p => p.id === content.project_id)?.name} • {typeLabels[content.type] ?? content.type}
-                        </p>
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center gap-4">
+                        <StatusIcon className={`h-5 w-5 shrink-0 ${status.color.includes('emerald') ? 'text-emerald-500' : status.color.includes('amber') ? 'text-amber-500' : status.color.includes('purple') ? 'text-purple-500' : 'text-slate-400'}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-slate-800 truncate">{content.title}</p>
+                          <p className="text-sm text-slate-500">
+                            {projects.find(p => p.id === content.project_id)?.name} • {typeLabels[content.type] ?? content.type}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className={status.color}>{status.label}</Badge>
                       </div>
-                      <Badge variant="outline" className={status.color}>{status.label}</Badge>
+                      {content.drive_url && getDrivePreviewUrl(content.drive_url) && (
+                        <div className="rounded-lg overflow-hidden border border-slate-200 bg-black aspect-video">
+                          <iframe src={getDrivePreviewUrl(content.drive_url)!} className="w-full h-full" allow="autoplay" allowFullScreen title={content.title} />
+                        </div>
+                      )}
+                      {content.files && content.files.length > 0 && (
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                          {content.files.slice(0, 8).map(f => {
+                            const isImg = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(f.name);
+                            const isVid = /\.(mp4|mov|webm|avi|mkv)$/i.test(f.name);
+                            return (
+                              <a key={f.name} href={f.url} target="_blank" rel="noopener noreferrer"
+                                className="block rounded-md overflow-hidden border border-slate-200 bg-slate-50">
+                                {isImg ? (
+                                  <img src={f.url} alt={f.name} className="w-full h-20 object-cover" />
+                                ) : isVid ? (
+                                  <video src={f.url} className="w-full h-20 object-cover" />
+                                ) : (
+                                  <div className="w-full h-20 flex items-center justify-center text-slate-400">
+                                    <FileText className="h-6 w-6" />
+                                  </div>
+                                )}
+                              </a>
+                            );
+                          })}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 );
@@ -448,6 +498,49 @@ function ContentApprovalCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Drive video preview (opens directly) */}
+        {content.drive_url && getDrivePreviewUrl(content.drive_url) && (
+          <div className="rounded-lg overflow-hidden border border-slate-200 bg-black aspect-video">
+            <iframe
+              src={getDrivePreviewUrl(content.drive_url)!}
+              className="w-full h-full"
+              allow="autoplay"
+              allowFullScreen
+              title={content.title}
+            />
+          </div>
+        )}
+        {content.drive_url && !getDrivePreviewUrl(content.drive_url) && (
+          <a href={content.drive_url} target="_blank" rel="noopener noreferrer"
+            className="text-sm text-violet-600 underline inline-flex items-center gap-1">
+            <ExternalLink className="h-3 w-3" /> Abrir vídeo no Drive
+          </a>
+        )}
+
+        {/* Image / file gallery */}
+        {content.files && content.files.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {content.files.map(f => {
+              const isImg = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(f.name);
+              const isVid = /\.(mp4|mov|webm|avi|mkv)$/i.test(f.name);
+              return (
+                <a key={f.name} href={f.url} target="_blank" rel="noopener noreferrer"
+                  className="block rounded-lg overflow-hidden border border-slate-200 bg-slate-50 hover:shadow-md transition-shadow">
+                  {isImg ? (
+                    <img src={f.url} alt={f.name} className="w-full h-40 object-cover" />
+                  ) : isVid ? (
+                    <video src={f.url} controls className="w-full h-40 object-cover" />
+                  ) : (
+                    <div className="w-full h-40 flex items-center justify-center text-slate-400">
+                      <FileText className="h-8 w-8" />
+                    </div>
+                  )}
+                </a>
+              );
+            })}
+          </div>
+        )}
+
         {content.description && (
           <p className="text-sm text-slate-600 bg-slate-50 rounded-lg p-3">{content.description}</p>
         )}
