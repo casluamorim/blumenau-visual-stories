@@ -60,7 +60,7 @@ export default function ProjectDetail() {
 
   const [form, setForm] = useState({
     title: '', type: 'photo' as any, priority: 'medium' as any, deadline: '',
-    revision_limit: 3, description: '',
+    revision_limit: 3, description: '', drive_url: '',
   });
 
   useEffect(() => { if (id) loadData(); }, [id]);
