@@ -342,6 +342,30 @@ export default function ProjectDetail() {
                     </div>
                   )}
 
+                  {/* Drive video preview */}
+                  {(content as any).drive_url && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                        <Video className="h-3 w-3" /> Vídeo (Google Drive)
+                      </p>
+                      {getDrivePreviewUrl((content as any).drive_url) ? (
+                        <div className="rounded-lg overflow-hidden border border-border bg-black aspect-video">
+                          <iframe
+                            src={getDrivePreviewUrl((content as any).drive_url)!}
+                            className="w-full h-full"
+                            allow="autoplay"
+                            allowFullScreen
+                          />
+                        </div>
+                      ) : (
+                        <a href={(content as any).drive_url} target="_blank" rel="noopener noreferrer"
+                          className="text-sm text-primary underline inline-flex items-center gap-1">
+                          <ExternalLink className="h-3 w-3" /> Abrir no Drive
+                        </a>
+                      )}
+                    </div>
+                  )}
+
                   {/* Upload button */}
                   <FileUploadButton
                     contentId={content.id}
