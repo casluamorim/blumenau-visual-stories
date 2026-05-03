@@ -220,6 +220,18 @@ export default function ProjectDetail() {
                   <div><Label>Limite revisões</Label><Input type="number" min={1} value={form.revision_limit} onChange={e => setForm({ ...form, revision_limit: Number(e.target.value) })} className="bg-muted border-border" /></div>
                 </div>
                 <div><Label>Descrição</Label><Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="bg-muted border-border" /></div>
+                <div>
+                  <Label className="flex items-center gap-1"><Link2 className="h-3 w-3" /> Link do Google Drive (vídeo)</Label>
+                  <Input
+                    placeholder="https://drive.google.com/file/d/.../view"
+                    value={form.drive_url}
+                    onChange={e => setForm({ ...form, drive_url: e.target.value })}
+                    className="bg-muted border-border"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Cole o link de compartilhamento do Drive. O vídeo abrirá embutido para o cliente.
+                  </p>
+                </div>
                 <Button onClick={handleCreateContent} className="w-full">Criar Conteúdo</Button>
               </div>
             </DialogContent>
