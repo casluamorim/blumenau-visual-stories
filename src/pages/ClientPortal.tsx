@@ -39,6 +39,11 @@ interface ProjectData {
   contents: ContentData[];
 }
 
+interface ContentFile {
+  name: string;
+  url: string;
+}
+
 interface ContentData {
   id: string;
   title: string;
@@ -50,6 +55,8 @@ interface ContentData {
   description: string | null;
   project_id: string;
   checklist: any;
+  drive_url: string | null;
+  files?: ContentFile[];
 }
 
 export default function ClientPortal() {
