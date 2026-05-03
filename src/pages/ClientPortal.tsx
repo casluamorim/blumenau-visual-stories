@@ -343,15 +343,44 @@ export default function ClientPortal() {
                 const StatusIcon = status.icon;
                 return (
                   <Card key={content.id} className="border-slate-200 bg-white hover:shadow-sm transition-shadow">
-                    <CardContent className="flex items-center gap-4 p-4">
-                      <StatusIcon className={`h-5 w-5 shrink-0 ${status.color.includes('emerald') ? 'text-emerald-500' : status.color.includes('amber') ? 'text-amber-500' : status.color.includes('purple') ? 'text-purple-500' : 'text-slate-400'}`} />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-800 truncate">{content.title}</p>
-                        <p className="text-sm text-slate-500">
-                          {projects.find(p => p.id === content.project_id)?.name} • {typeLabels[content.type] ?? content.type}
-                        </p>
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center gap-4">
+                        <StatusIcon className={`h-5 w-5 shrink-0 ${status.color.includes('emerald') ? 'text-emerald-500' : status.color.includes('amber') ? 'text-amber-500' : status.color.includes('purple') ? 'text-purple-500' : 'text-slate-400'}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-slate-800 truncate">{content.title}</p>
+                          <p className="text-sm text-slate-500">
+                            {projects.find(p => p.id === content.project_id)?.name} • {typeLabels[content.type] ?? content.type}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className={status.color}>{status.label}</Badge>
                       </div>
-                      <Badge variant="outline" className={status.color}>{status.label}</Badge>
+                      {content.drive_url && getDrivePreviewUrl(content.drive_url) && (
+                        <div className="rounded-lg overflow-hidden border border-slate-200 bg-black aspect-video">
+                          <iframe src={getDrivePreviewUrl(content.drive_url)!} className="w-full h-full" allow="autoplay" allowFullScreen title={content.title} />
+                        </div>
+                      )}
+                      {content.files && content.files.length > 0 && (
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                          {content.files.slice(0, 8).map(f => {
+                            const isImg = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(f.name);
+                            const isVid = /\.(mp4|mov|webm|avi|mkv)$/i.test(f.name);
+                            return (
+                              <a key={f.name} href={f.url} target="_blank" rel="noopener noreferrer"
+                                className="block rounded-md overflow-hidden border border-slate-200 bg-slate-50">
+                                {isImg ? (
+                                  <img src={f.url} alt={f.name} className="w-full h-20 object-cover" />
+                                ) : isVid ? (
+                                  <video src={f.url} className="w-full h-20 object-cover" />
+                                ) : (
+                                  <div className="w-full h-20 flex items-center justify-center text-slate-400">
+                                    <FileText className="h-6 w-6" />
+                                  </div>
+                                )}
+                              </a>
+                            );
+                          })}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 );
