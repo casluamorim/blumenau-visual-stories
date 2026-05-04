@@ -2,10 +2,6 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
-  FolderKanban,
-  FileText,
-  Tags,
-  Activity,
   DollarSign,
   TrendingUp,
   Settings,
@@ -24,10 +20,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: Users, label: 'Clientes', path: '/clients' },
-  { icon: FolderKanban, label: 'Projetos', path: '/projects' },
-  { icon: FileText, label: 'Conteúdos', path: '/contents' },
-  { icon: Tags, label: 'Tags', path: '/tags' },
-  { icon: Activity, label: 'Atividades', path: '/activity' },
   { icon: DollarSign, label: 'Financeiro PJ', path: '/financial' },
   { icon: DollarSign, label: 'Financeiro PF', path: '/financial/personal' },
   { icon: TrendingUp, label: 'Fluxo de Caixa', path: '/cashflow' },
