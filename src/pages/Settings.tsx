@@ -15,9 +15,10 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Building2, Key, MessageSquare, FileText, User as UserIcon,
-  Upload, Save, Loader2, Copy, Eye, EyeOff, Users as UsersIcon,
+  Upload, Save, Loader2, Copy, Eye, EyeOff, Users as UsersIcon, Tags as TagsIcon,
 } from 'lucide-react';
 import { UsersManagement } from '@/components/settings/UsersManagement';
+import { TagsManager } from '@/components/settings/TagsManager';
 
 interface AgencySettings {
   id: string;
@@ -203,7 +204,7 @@ export default function Settings() {
 
         <Tabs defaultValue="agency">
           <div className="-mx-4 md:mx-0 px-4 md:px-0 overflow-x-auto">
-            <TabsList className="inline-flex w-max md:grid md:w-full md:grid-cols-6 gap-1">
+            <TabsList className="inline-flex w-max md:grid md:w-full md:grid-cols-7 gap-1">
               <TabsTrigger value="agency" className="whitespace-nowrap">
                 <Building2 className="mr-2 h-4 w-4" />Agência
               </TabsTrigger>
@@ -216,6 +217,9 @@ export default function Settings() {
               <TabsTrigger value="defaults" className="whitespace-nowrap">
                 <FileText className="mr-2 h-4 w-4" />Padrões
               </TabsTrigger>
+              <TabsTrigger value="tags" className="whitespace-nowrap">
+                <TagsIcon className="mr-2 h-4 w-4" />Tags
+              </TabsTrigger>
               <TabsTrigger value="users" className="whitespace-nowrap">
                 <UsersIcon className="mr-2 h-4 w-4" />Usuários
               </TabsTrigger>
@@ -224,6 +228,11 @@ export default function Settings() {
               </TabsTrigger>
             </TabsList>
           </div>
+
+          {/* TAGS */}
+          <TabsContent value="tags" className="mt-6">
+            <TagsManager />
+          </TabsContent>
 
           {/* USUÁRIOS */}
           <TabsContent value="users" className="mt-6">

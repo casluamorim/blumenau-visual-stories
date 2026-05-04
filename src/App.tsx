@@ -10,6 +10,7 @@ import FinancialPersonal from "./pages/FinancialPersonal";
 import CashFlow from "./pages/CashFlow";
 import Settings from "./pages/Settings";
 import Clients from "./pages/Clients";
+import ClientDetail from "./pages/ClientDetail";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import Contents from "./pages/Contents";
@@ -39,6 +40,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Dashboard />} />
       <Route path="/clients" element={<Clients />} />
+      <Route path="/clients/:id" element={<ClientDetail />} />
       <Route path="/projects" element={<Projects />} />
       <Route path="/projects/:id" element={<ProjectDetail />} />
       <Route path="/contents" element={<Contents />} />

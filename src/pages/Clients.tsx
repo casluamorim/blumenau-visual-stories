@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Search, Mail, Phone, Building2, MoreHorizontal, Edit, Trash2, Link2, Copy, Check } from 'lucide-react';
+import { Plus, Search, Mail, Phone, Building2, MoreHorizontal, Edit, Trash2, Link2, Copy, Check, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import type { Database } from '@/integrations/supabase/types';
@@ -172,16 +173,16 @@ export default function Clients() {
         {/* Grid */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map(client => (
-            <Card key={client.id} className="border-border bg-card group">
+            <Card key={client.id} className="border-border bg-card group hover:border-primary/30 transition-colors">
               <CardHeader className="flex flex-row items-start justify-between pb-3">
-                <div className="min-w-0 flex-1">
-                  <CardTitle className="text-lg text-foreground truncate">{client.name}</CardTitle>
+                <Link to={`/clients/${client.id}`} className="min-w-0 flex-1">
+                  <CardTitle className="text-lg text-foreground truncate hover:text-primary transition-colors">{client.name}</CardTitle>
                   {client.company && (
                     <p className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                       <Building2 className="h-3 w-3" /> {client.company}
                     </p>
                   )}
-                </div>
+                </Link>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -189,6 +190,9 @@ export default function Clients() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <Link to={`/clients/${client.id}`}><ArrowRight className="mr-2 h-4 w-4" /> Abrir cliente</Link>
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => generatePortalLink(client.id)}>
                       {copiedId === client.id ? <Check className="mr-2 h-4 w-4" /> : <Link2 className="mr-2 h-4 w-4" />}
                       {copiedId === client.id ? 'Link copiado!' : 'Link do Portal'}
