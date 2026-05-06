@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,33 +10,62 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Search, Mail, Phone, Building2, MoreHorizontal, Edit, Trash2, Link2, Copy, Check, ArrowRight } from 'lucide-react';
+import { Plus, Search, Mail, Phone, Building2, MoreHorizontal, Edit, Trash2, Link2, Copy, Check, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import type { Database } from '@/integrations/supabase/types';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 
 type Client = Database['public']['Tables']['clients']['Row'];
 type ClientInsert = Database['public']['Tables']['clients']['Insert'];
 
+const PAGE_SIZE = 24;
+
 export default function Clients() {
-  const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const qc = useQueryClient();
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const [form, setForm] = useState<ClientInsert>({
     name: '', company: '', email: '', phone: '', status: 'active', notes: '',
   });
 
-  useEffect(() => { loadClients(); }, []);
+  const { data, isFetching } = useQuery({
+    queryKey: ['clients', { page, search }],
+    queryFn: async () => {
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      let query = supabase
+        .from('clients')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
-  async function loadClients() {
-    const { data } = await supabase.from('clients').select('*').order('created_at', { ascending: false });
-    setClients(data ?? []);
+      if (search.trim()) {
+        const s = `%${search.trim()}%`;
+        query = query.or(`name.ilike.${s},company.ilike.${s},email.ilike.${s}`);
+      }
+
+      const { data, count, error } = await query;
+      if (error) throw error;
+      return { rows: (data ?? []) as Client[], count: count ?? 0 };
+    },
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  });
+
+  const clients = data?.rows ?? [];
+  const total = data?.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  function refresh() {
+    qc.invalidateQueries({ queryKey: ['clients'] });
   }
 
   async function handleSave() {
@@ -54,14 +83,14 @@ export default function Clients() {
       toast({ title: 'Cliente criado!' });
     }
     resetForm();
-    loadClients();
+    refresh();
   }
 
   async function handleDelete(id: string) {
     const { error } = await supabase.from('clients').delete().eq('id', id);
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
     toast({ title: 'Cliente removido!' });
-    loadClients();
+    refresh();
   }
 
   function resetForm() {
@@ -77,7 +106,6 @@ export default function Clients() {
   }
 
   async function generatePortalLink(clientId: string) {
-    // Check if token already exists
     const { data: existing } = await supabase
       .from('client_access_tokens')
       .select('token')
@@ -109,12 +137,6 @@ export default function Clients() {
     toast({ title: 'Link copiado!', description: 'Envie para o cliente acessar o portal.' });
   }
 
-  const filtered = clients.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.company?.toLowerCase().includes(search.toLowerCase()) ||
-    c.email?.toLowerCase().includes(search.toLowerCase())
-  );
-
   const statusColors: Record<string, string> = {
     active: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
     inactive: 'bg-red-500/10 text-red-400 border-red-500/20',
@@ -129,7 +151,7 @@ export default function Clients() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="page-title">Clientes</h1>
-            <p className="text-muted-foreground">{clients.length} clientes cadastrados</p>
+            <p className="text-muted-foreground">{total} clientes cadastrados</p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o) resetForm(); setDialogOpen(o); }}>
             <DialogTrigger asChild>
@@ -167,12 +189,17 @@ export default function Clients() {
         {/* Search */}
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Buscar clientes..." value={search} onChange={e => setSearch(e.target.value)} className="bg-muted border-border pl-10" />
+          <Input
+            placeholder="Buscar clientes..."
+            value={search}
+            onChange={e => { setSearch(e.target.value); setPage(0); }}
+            className="bg-muted border-border pl-10"
+          />
         </div>
 
         {/* Grid */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map(client => (
+          {clients.map(client => (
             <Card key={client.id} className="border-border bg-card group hover:border-primary/30 transition-colors">
               <CardHeader className="flex flex-row items-start justify-between pb-3">
                 <Link to={`/clients/${client.id}`} className="min-w-0 flex-1">
@@ -209,12 +236,29 @@ export default function Clients() {
               </CardContent>
             </Card>
           ))}
-          {filtered.length === 0 && (
+          {clients.length === 0 && !isFetching && (
             <div className="col-span-full py-12 text-center text-muted-foreground">
               {search ? 'Nenhum cliente encontrado.' : 'Nenhum cliente cadastrado. Crie o primeiro!'}
             </div>
           )}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-border pt-4">
+            <p className="text-sm text-muted-foreground">
+              Página {page + 1} de {totalPages} · {total} clientes
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0 || isFetching}>
+                <ChevronLeft className="h-4 w-4" /> Anterior
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page + 1 >= totalPages || isFetching}>
+                Próxima <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </AppLayout>
   );
