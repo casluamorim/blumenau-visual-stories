@@ -346,6 +346,18 @@ export default function ClientDetail() {
         <DialogContent className="bg-card border-border">
           <DialogHeader><DialogTitle>Novo projeto · {client.name}</DialogTitle></DialogHeader>
           <div className="space-y-3">
+            {templates.length > 0 && (
+              <div>
+                <Label>Template (opcional)</Label>
+                <Select value={projForm.template_id || 'none'} onValueChange={v => setProjForm({ ...projForm, template_id: v === 'none' ? '' : v })}>
+                  <SelectTrigger><SelectValue placeholder="Sem template" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem template</SelectItem>
+                    {templates.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div><Label>Nome *</Label><Input value={projForm.name} onChange={e => setProjForm({ ...projForm, name: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
               <div>
