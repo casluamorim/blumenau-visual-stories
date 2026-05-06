@@ -824,6 +824,42 @@ export type Database = {
           },
         ]
       }
+      project_templates: {
+        Row: {
+          checklist: Json
+          created_at: string
+          created_by: string | null
+          default_contents: Json
+          default_priority: Database["public"]["Enums"]["priority_level"]
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          checklist?: Json
+          created_at?: string
+          created_by?: string | null
+          default_contents?: Json
+          default_priority?: Database["public"]["Enums"]["priority_level"]
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          checklist?: Json
+          created_at?: string
+          created_by?: string | null
+          default_contents?: Json
+          default_priority?: Database["public"]["Enums"]["priority_level"]
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       projects: {
         Row: {
           client_id: string
