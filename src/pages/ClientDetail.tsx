@@ -65,11 +65,15 @@ export default function ClientDetail() {
   const [contentDlg, setContentDlg] = useState(false);
   const [invDlg, setInvDlg] = useState(false);
 
-  const [projForm, setProjForm] = useState({ name: '', priority: 'medium', deadline: '', description: '' });
+  const [projForm, setProjForm] = useState({ name: '', priority: 'medium', deadline: '', description: '', template_id: '' });
   const [contentForm, setContentForm] = useState({ title: '', type: 'photo', priority: 'medium', deadline: '', project_id: '' });
   const [invForm, setInvForm] = useState({ title: '', amount: '', due_date: '', notes: '' });
+  const [templates, setTemplates] = useState<any[]>([]);
 
   useEffect(() => { if (id) loadAll(); }, [id]);
+  useEffect(() => {
+    supabase.from('project_templates').select('*').order('name').then(({ data }) => setTemplates(data ?? []));
+  }, []);
 
   async function loadAll() {
     setLoading(true);
@@ -106,18 +110,30 @@ export default function ClientDetail() {
 
   async function createProject() {
     if (!projForm.name.trim()) { toast({ title: 'Nome obrigatório', variant: 'destructive' }); return; }
-    const { error } = await supabase.from('projects').insert({
+    const tpl = templates.find(t => t.id === projForm.template_id);
+    const { data: project, error } = await supabase.from('projects').insert({
       name: projForm.name,
       client_id: id!,
       status: 'briefing',
-      priority: projForm.priority as any,
+      priority: (tpl?.default_priority ?? projForm.priority) as any,
       deadline: projForm.deadline || null,
-      description: projForm.description || null,
+      description: projForm.description || tpl?.description || null,
       created_by: user?.id,
-    });
-    if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
-    toast({ title: 'Projeto criado!' });
-    setProjForm({ name: '', priority: 'medium', deadline: '', description: '' });
+    }).select('id').single();
+    if (error || !project) { toast({ title: 'Erro', description: error?.message, variant: 'destructive' }); return; }
+    if (tpl?.default_contents?.length) {
+      const rows = (tpl.default_contents as any[]).map((c: any) => ({
+        project_id: project.id,
+        title: c.title,
+        type: (c.type ?? 'other') as any,
+        priority: (c.priority ?? 'medium') as any,
+        checklist: tpl.checklist ?? [],
+        created_by: user?.id,
+      }));
+      await supabase.from('contents').insert(rows);
+    }
+    toast({ title: tpl ? `Projeto criado a partir de "${tpl.name}"` : 'Projeto criado!' });
+    setProjForm({ name: '', priority: 'medium', deadline: '', description: '', template_id: '' });
     setProjDlg(false);
     loadAll();
   }
