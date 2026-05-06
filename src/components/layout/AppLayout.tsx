@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { AppSidebar } from './AppSidebar';
+import { QuickCreateFab } from './QuickCreateFab';
 
 export function AppLayout({ children }: { children: ReactNode }) {
   return (
@@ -8,6 +9,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <main className="md:ml-64 min-h-screen p-4 md:p-6 pt-20 md:pt-6 transition-all duration-300">
         {children}
       </main>
+      <QuickCreateFab />
     </div>
   );
 }
