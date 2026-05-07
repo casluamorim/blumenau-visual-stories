@@ -45,6 +45,14 @@ interface ContentFile {
   url: string;
 }
 
+interface ContentComment {
+  id: string;
+  target: string;
+  author_name: string | null;
+  text: string;
+  created_at: string;
+}
+
 interface ContentData {
   id: string;
   title: string;
@@ -54,10 +62,14 @@ interface ContentData {
   revision_count: number | null;
   revision_limit: number | null;
   description: string | null;
+  caption: string | null;
+  media_status: string;
+  copy_status: string;
   project_id: string;
   checklist: any;
   drive_url: string | null;
   files?: ContentFile[];
+  comments?: ContentComment[];
 }
 
 export default function ClientPortal() {
@@ -120,21 +132,22 @@ export default function ClientPortal() {
     for (const project of projectsData ?? []) {
       const { data: contents } = await supabase
         .from('contents')
-        .select('id, title, type, status, priority, revision_count, revision_limit, description, project_id, checklist, drive_url')
+        .select('id, title, type, status, priority, revision_count, revision_limit, description, caption, media_status, copy_status, project_id, checklist, drive_url')
         .eq('project_id', project.id)
         .order('created_at', { ascending: false });
 
       const contentsWithFiles: ContentData[] = [];
       for (const c of contents ?? []) {
-        const { data: files } = await supabase.storage
-          .from('content-files')
-          .list(`${project.id}/${c.id}`);
+        const [{ data: files }, { data: cmts }] = await Promise.all([
+          supabase.storage.from('content-files').list(`${project.id}/${c.id}`),
+          supabase.from('content_comments').select('*').eq('content_id', c.id).order('created_at', { ascending: true }),
+        ]);
         const mapped: ContentFile[] = (files ?? []).map(f => ({
           name: f.name,
           url: supabase.storage.from('content-files')
             .getPublicUrl(`${project.id}/${c.id}/${f.name}`).data.publicUrl,
         }));
-        contentsWithFiles.push({ ...(c as any), files: mapped });
+        contentsWithFiles.push({ ...(c as any), files: mapped, comments: (cmts as any) ?? [] });
       }
 
       projectsWithContents.push({
