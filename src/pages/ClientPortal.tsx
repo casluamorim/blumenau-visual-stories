@@ -478,208 +478,237 @@ export default function ClientPortal() {
   );
 }
 
+function StatusPill({ status }: { status: string }) {
+  const map: Record<string, { label: string; cls: string }> = {
+    pending: { label: 'Pendente', cls: 'bg-amber-50 text-amber-600 border-amber-200' },
+    approved: { label: 'Aprovado', cls: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
+    change_requested: { label: 'Alteração solicitada', cls: 'bg-purple-50 text-purple-600 border-purple-200' },
+  };
+  const s = map[status] ?? map.pending;
+  return <Badge variant="outline" className={s.cls}>{s.label}</Badge>;
+}
+
 function ContentApprovalCard({
   content,
   projectName,
-  comment,
-  onCommentChange,
-  onApprove,
-  onRequestRevision,
+  onApprovePart,
+  onRequestChange,
 }: {
   content: ContentData;
   projectName: string;
-  comment: string;
-  onCommentChange: (text: string) => void;
-  onApprove: () => void;
-  onRequestRevision: () => void;
+  onApprovePart: (part: 'media' | 'copy') => void;
+  onRequestChange: (part: 'media' | 'copy' | 'general', text: string, name: string) => void;
 }) {
   const [lightbox, setLightbox] = useState<{ url: string; name: string; type: 'image' | 'video' } | null>(null);
+  const [authorName, setAuthorName] = useState('');
+  const [draft, setDraft] = useState<{ media: string; copy: string; general: string }>({ media: '', copy: '', general: '' });
   const drivePreview = content.drive_url ? getDrivePreviewUrl(content.drive_url) : null;
   const images = (content.files ?? []).filter(f => /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(f.name));
   const videos = (content.files ?? []).filter(f => /\.(mp4|mov|webm|avi|mkv)$/i.test(f.name));
   const others = (content.files ?? []).filter(f =>
     !/\.(jpg|jpeg|png|gif|webp|svg|mp4|mov|webm|avi|mkv)$/i.test(f.name)
   );
+  const hasCopy = !!(content.caption && content.caption.trim());
+  const comments = content.comments ?? [];
+  const submit = (part: 'media' | 'copy' | 'general') => {
+    onRequestChange(part, draft[part], authorName);
+    setDraft(prev => ({ ...prev, [part]: '' }));
+  };
 
   return (
     <>
       <Card className="border-slate-200 bg-white overflow-hidden">
         <div className="h-1 bg-amber-400" />
         <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
               <CardTitle className="text-lg text-slate-800">{content.title}</CardTitle>
               <p className="text-sm text-slate-500 mt-1">
                 {projectName} • {typeLabels[content.type] ?? content.type}
               </p>
             </div>
-            <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">
-              Aguardando aprovação
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Google Drive video preview */}
-          {content.drive_url && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-medium text-slate-500 flex items-center gap-1">
-                  <Video className="h-3 w-3" /> Vídeo (Google Drive)
-                </p>
-                <a
-                  href={content.drive_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-violet-600 hover:underline inline-flex items-center gap-1"
-                >
-                  <ExternalLink className="h-3 w-3" /> Abrir no Drive
-                </a>
-              </div>
-              {drivePreview ? (
-                <div className="rounded-lg overflow-hidden border border-slate-200 bg-black aspect-video">
-                  <iframe
-                    src={drivePreview}
-                    className="w-full h-full"
-                    allow="autoplay; fullscreen"
-                    allowFullScreen
-                    title={content.title}
-                  />
-                </div>
-              ) : (
-                <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-                  <Video className="h-8 w-8 text-slate-400 mx-auto mb-2" />
-                  <p className="text-sm text-slate-500 mb-3">
-                    Não conseguimos exibir este link aqui. Abra direto no Drive.
-                  </p>
-                  <a
-                    href={content.drive_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-sm font-medium text-violet-600 hover:text-violet-700"
-                  >
-                    <ExternalLink className="h-4 w-4" /> Ver vídeo no Google Drive
-                  </a>
-                </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="text-xs text-slate-500 self-center">Mídia:</span>
+              <StatusPill status={content.media_status} />
+              {hasCopy && (
+                <>
+                  <span className="text-xs text-slate-500 self-center">Copy:</span>
+                  <StatusPill status={content.copy_status} />
+                </>
               )}
             </div>
-          )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {/* ============== MEDIA SECTION ============== */}
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <Image className="h-4 w-4 text-violet-500" /> Mídia
+              </h4>
+            </div>
 
-          {/* Image gallery (thumbnails -> modal) */}
-          {images.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-slate-500 mb-2">
-                Imagens ({images.length})
-              </p>
+            {content.drive_url && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                    <Video className="h-3 w-3" /> Vídeo (Google Drive)
+                  </p>
+                  <a href={content.drive_url} target="_blank" rel="noopener noreferrer"
+                     className="text-xs text-violet-600 hover:underline inline-flex items-center gap-1">
+                    <ExternalLink className="h-3 w-3" /> Abrir no Drive
+                  </a>
+                </div>
+                {drivePreview ? (
+                  <div className="rounded-lg overflow-hidden border border-slate-200 bg-black aspect-video">
+                    <iframe src={drivePreview} className="w-full h-full" allow="autoplay; fullscreen" allowFullScreen title={content.title} />
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                    <Video className="h-8 w-8 text-slate-400 mx-auto mb-2" />
+                    <a href={content.drive_url} target="_blank" rel="noopener noreferrer"
+                       className="inline-flex items-center gap-2 text-sm font-medium text-violet-600 hover:text-violet-700">
+                      <ExternalLink className="h-4 w-4" /> Ver vídeo no Google Drive
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {images.length > 0 && (
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {images.map(f => (
-                  <button
-                    key={f.name}
-                    type="button"
+                  <button key={f.name} type="button"
                     onClick={() => setLightbox({ url: f.url, name: f.name, type: 'image' })}
-                    className="group relative block rounded-lg overflow-hidden border border-slate-200 bg-slate-50 hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-violet-500"
-                  >
-                    <img
-                      src={f.url}
-                      alt={f.name}
-                      loading="lazy"
-                      className="w-full h-28 object-cover group-hover:scale-105 transition-transform"
-                    />
+                    className="group block rounded-lg overflow-hidden border border-slate-200 bg-slate-50 hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-violet-500">
+                    <img src={f.url} alt={f.name} loading="lazy" className="w-full h-28 object-cover group-hover:scale-105 transition-transform" />
                   </button>
                 ))}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Video files */}
-          {videos.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-slate-500 mb-2">Vídeos ({videos.length})</p>
+            {videos.length > 0 && (
               <div className="grid grid-cols-2 gap-2">
                 {videos.map(f => (
-                  <button
-                    key={f.name}
-                    type="button"
+                  <button key={f.name} type="button"
                     onClick={() => setLightbox({ url: f.url, name: f.name, type: 'video' })}
-                    className="group block rounded-lg overflow-hidden border border-slate-200 bg-black focus:outline-none focus:ring-2 focus:ring-violet-500"
-                  >
+                    className="group block rounded-lg overflow-hidden border border-slate-200 bg-black focus:outline-none focus:ring-2 focus:ring-violet-500">
                     <video src={f.url} className="w-full h-32 object-cover" />
                   </button>
                 ))}
               </div>
-            </div>
+            )}
+
+            {others.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {others.map(f => (
+                  <a key={f.name} href={f.url} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600">
+                    <FileText className="h-3 w-3" />{f.name.replace(/^\d+_/, '')}
+                  </a>
+                ))}
+              </div>
+            )}
+
+            {/* Media-specific actions */}
+            {content.media_status !== 'approved' && (
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <Textarea
+                  placeholder="Comentário sobre a mídia (opcional para aprovar, obrigatório para alterar)"
+                  value={draft.media}
+                  onChange={e => setDraft(p => ({ ...p, media: e.target.value }))}
+                  className="border-slate-200 bg-slate-50 text-slate-800" rows={2}
+                />
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button onClick={() => onApprovePart('media')} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white">
+                    <CheckCircle className="mr-2 h-4 w-4" /> Aprovar mídia
+                  </Button>
+                  <Button onClick={() => submit('media')} variant="outline" className="flex-1 border-amber-300 text-amber-700 hover:bg-amber-50">
+                    <Send className="mr-2 h-4 w-4" /> Solicitar alteração
+                  </Button>
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* ============== COPY SECTION ============== */}
+          {hasCopy && (
+            <section className="space-y-3">
+              <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <FileText className="h-4 w-4 text-violet-500" /> Copy / Legenda
+              </h4>
+              <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 text-sm text-slate-700 whitespace-pre-wrap">
+                {content.caption}
+              </div>
+              {content.copy_status !== 'approved' && (
+                <div className="space-y-2 pt-1">
+                  <Textarea
+                    placeholder="Comentário sobre a copy (opcional para aprovar, obrigatório para alterar)"
+                    value={draft.copy}
+                    onChange={e => setDraft(p => ({ ...p, copy: e.target.value }))}
+                    className="border-slate-200 bg-slate-50 text-slate-800" rows={2}
+                  />
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button onClick={() => onApprovePart('copy')} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white">
+                      <CheckCircle className="mr-2 h-4 w-4" /> Aprovar copy
+                    </Button>
+                    <Button onClick={() => submit('copy')} variant="outline" className="flex-1 border-amber-300 text-amber-700 hover:bg-amber-50">
+                      <Send className="mr-2 h-4 w-4" /> Solicitar alteração
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </section>
           )}
 
-          {/* Other files */}
-          {others.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {others.map(f => (
-                <a
-                  key={f.name}
-                  href={f.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600"
-                >
-                  <FileText className="h-3 w-3" />
-                  {f.name.replace(/^\d+_/, '')}
-                </a>
-              ))}
-            </div>
-          )}
-
+          {/* Description */}
           {content.description && (
             <p className="text-sm text-slate-600 bg-slate-50 rounded-lg p-3">{content.description}</p>
           )}
 
-          {/* Checklist display */}
-          {content.checklist && Array.isArray(content.checklist) && content.checklist.length > 0 && (
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-slate-500">Checklist da equipe:</p>
-              <div className="space-y-1">
-                {(content.checklist as any[]).map((item: any) => (
-                  <div key={item.id} className="flex items-center gap-2 text-sm">
-                    {item.checked ? (
-                      <CheckCircle className="h-4 w-4 text-emerald-500" />
-                    ) : (
-                      <Clock className="h-4 w-4 text-slate-300" />
-                    )}
-                    <span className={item.checked ? 'text-slate-600' : 'text-slate-400'}>{item.label}</span>
+          {/* ============== COMMENTS / HISTORY ============== */}
+          <section className="space-y-3 border-t border-slate-100 pt-4">
+            <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-violet-500" /> Comentários ({comments.length})
+            </h4>
+            {comments.length > 0 && (
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                {comments.map(c => (
+                  <div key={c.id} className="text-sm bg-slate-50 border border-slate-200 rounded-md p-2">
+                    <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                      <span className="font-medium text-slate-600">
+                        {c.author_name ?? 'Equipe'}
+                        {c.target !== 'general' && (
+                          <Badge variant="outline" className="ml-2 text-[10px] py-0">{c.target === 'media' ? 'mídia' : 'copy'}</Badge>
+                        )}
+                      </span>
+                      <span>{new Date(c.created_at).toLocaleString('pt-BR')}</span>
+                    </div>
+                    <p className="text-slate-700 whitespace-pre-wrap">{c.text}</p>
                   </div>
                 ))}
               </div>
+            )}
+
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="Seu nome (opcional)"
+                value={authorName}
+                onChange={e => setAuthorName(e.target.value)}
+                className="w-full text-sm rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-800 placeholder:text-slate-400"
+              />
+              <Textarea
+                placeholder="Deixe um comentário geral..."
+                value={draft.general}
+                onChange={e => setDraft(p => ({ ...p, general: e.target.value }))}
+                className="border-slate-200 bg-slate-50 text-slate-800" rows={2}
+              />
+              <Button onClick={() => submit('general')} variant="outline" size="sm" className="border-violet-300 text-violet-700 hover:bg-violet-50">
+                <MessageSquare className="mr-2 h-4 w-4" /> Enviar comentário
+              </Button>
             </div>
-          )}
-
-          {/* Comment for revision */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-600 flex items-center gap-1">
-              <MessageSquare className="h-4 w-4" /> Comentário (para revisão)
-            </label>
-            <Textarea
-              placeholder="Descreva o que precisa ser ajustado..."
-              value={comment}
-              onChange={e => onCommentChange(e.target.value)}
-              className="border-slate-200 bg-slate-50 text-slate-800 placeholder:text-slate-400 resize-none"
-              rows={2}
-            />
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex gap-3 pt-2">
-            <Button
-              onClick={onApprove}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-            >
-              <CheckCircle className="mr-2 h-4 w-4" /> Aprovar
-            </Button>
-            <Button
-              onClick={onRequestRevision}
-              variant="outline"
-              className="flex-1 border-amber-300 text-amber-600 hover:bg-amber-50"
-            >
-              <Send className="mr-2 h-4 w-4" /> Solicitar Revisão
-            </Button>
-          </div>
+          </section>
         </CardContent>
       </Card>
 
@@ -687,19 +716,10 @@ function ContentApprovalCard({
       <Dialog open={!!lightbox} onOpenChange={open => !open && setLightbox(null)}>
         <DialogContent className="max-w-5xl bg-black border-slate-800 p-2">
           {lightbox?.type === 'image' && (
-            <img
-              src={lightbox.url}
-              alt={lightbox.name}
-              className="w-full max-h-[85vh] object-contain rounded"
-            />
+            <img src={lightbox.url} alt={lightbox.name} className="w-full max-h-[85vh] object-contain rounded" />
           )}
           {lightbox?.type === 'video' && (
-            <video
-              src={lightbox.url}
-              controls
-              autoPlay
-              className="w-full max-h-[85vh] rounded"
-            />
+            <video src={lightbox.url} controls autoPlay className="w-full max-h-[85vh] rounded" />
           )}
         </DialogContent>
       </Dialog>
