@@ -293,6 +293,36 @@ export type Database = {
           },
         ]
       }
+      content_comments: {
+        Row: {
+          author_name: string | null
+          author_user_id: string | null
+          content_id: string
+          created_at: string
+          id: string
+          target: string
+          text: string
+        }
+        Insert: {
+          author_name?: string | null
+          author_user_id?: string | null
+          content_id: string
+          created_at?: string
+          id?: string
+          target?: string
+          text: string
+        }
+        Update: {
+          author_name?: string | null
+          author_user_id?: string | null
+          content_id?: string
+          created_at?: string
+          id?: string
+          target?: string
+          text?: string
+        }
+        Relationships: []
+      }
       content_tags: {
         Row: {
           content_id: string
@@ -373,13 +403,17 @@ export type Database = {
       contents: {
         Row: {
           assigned_to: string | null
+          caption: string | null
           checklist: Json | null
+          copy_status: string
           created_at: string
           created_by: string | null
           deadline: string | null
           description: string | null
           drive_url: string | null
           id: string
+          internal_notes: string | null
+          media_status: string
           priority: Database["public"]["Enums"]["priority_level"]
           project_id: string
           revision_count: number | null
@@ -391,13 +425,17 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          caption?: string | null
           checklist?: Json | null
+          copy_status?: string
           created_at?: string
           created_by?: string | null
           deadline?: string | null
           description?: string | null
           drive_url?: string | null
           id?: string
+          internal_notes?: string | null
+          media_status?: string
           priority?: Database["public"]["Enums"]["priority_level"]
           project_id: string
           revision_count?: number | null
@@ -409,13 +447,17 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          caption?: string | null
           checklist?: Json | null
+          copy_status?: string
           created_at?: string
           created_by?: string | null
           deadline?: string | null
           description?: string | null
           drive_url?: string | null
           id?: string
+          internal_notes?: string | null
+          media_status?: string
           priority?: Database["public"]["Enums"]["priority_level"]
           project_id?: string
           revision_count?: number | null
