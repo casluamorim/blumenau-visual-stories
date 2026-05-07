@@ -61,6 +61,7 @@ export default function ProjectDetail() {
   const [form, setForm] = useState({
     title: '', type: 'photo' as any, priority: 'medium' as any, deadline: '',
     revision_limit: 3, description: '', drive_url: '',
+    caption: '', internal_notes: '',
   });
 
   useEffect(() => { if (id) loadData(); }, [id]);
@@ -99,14 +100,16 @@ export default function ProjectDetail() {
     const { error } = await supabase.from('contents').insert({
       ...form,
       drive_url: form.drive_url.trim() || null,
+      caption: form.caption.trim() || null,
+      internal_notes: form.internal_notes.trim() || null,
       project_id: id!,
       deadline: form.deadline || null,
       checklist: defaultChecklist,
       created_by: user?.id,
-    });
+    } as any);
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
     toast({ title: 'Conteúdo criado!' });
-    setForm({ title: '', type: 'photo', priority: 'medium', deadline: '', revision_limit: 3, description: '', drive_url: '' });
+    setForm({ title: '', type: 'photo', priority: 'medium', deadline: '', revision_limit: 3, description: '', drive_url: '', caption: '', internal_notes: '' });
     setDialogOpen(false);
     loadData();
   }
@@ -220,6 +223,26 @@ export default function ProjectDetail() {
                   <div><Label>Limite revisões</Label><Input type="number" min={1} value={form.revision_limit} onChange={e => setForm({ ...form, revision_limit: Number(e.target.value) })} className="bg-muted border-border" /></div>
                 </div>
                 <div><Label>Descrição</Label><Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="bg-muted border-border" /></div>
+                <div>
+                  <Label>✍️ Copy / Legenda</Label>
+                  <Textarea
+                    placeholder="Texto que vai junto com o post (cliente irá aprovar separadamente)"
+                    value={form.caption}
+                    onChange={e => setForm({ ...form, caption: e.target.value })}
+                    rows={3}
+                    className="bg-muted border-border"
+                  />
+                </div>
+                <div>
+                  <Label>🧾 Observações internas (só equipe)</Label>
+                  <Textarea
+                    placeholder="Notas internas — o cliente NÃO vê"
+                    value={form.internal_notes}
+                    onChange={e => setForm({ ...form, internal_notes: e.target.value })}
+                    rows={2}
+                    className="bg-muted border-border"
+                  />
+                </div>
                 <div>
                   <Label className="flex items-center gap-1"><Link2 className="h-3 w-3" /> Link do Google Drive (vídeo)</Label>
                   <Input
