@@ -228,7 +228,9 @@ export default function ClientPortal() {
     );
   }
 
-  const pendingApproval = projects.flatMap(p => p.contents.filter(c => c.status === 'in_review'));
+  const pendingApproval = projects.flatMap(p => p.contents.filter(c =>
+    c.status === 'in_review' || c.media_status === 'pending' || (c.caption && c.copy_status === 'pending')
+  ));
   const allContents = projects.flatMap(p => p.contents);
 
   return (
