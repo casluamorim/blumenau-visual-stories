@@ -332,10 +332,8 @@ export default function ClientPortal() {
                   key={content.id}
                   content={content}
                   projectName={projects.find(p => p.id === content.project_id)?.name ?? ''}
-                  comment={comment[content.id] ?? ''}
-                  onCommentChange={(text) => setComment(prev => ({ ...prev, [content.id]: text }))}
-                  onApprove={() => handleApprove(content.id)}
-                  onRequestRevision={() => handleRequestRevision(content.id)}
+                  onApprovePart={(part) => approvePart(content.id, part)}
+                  onRequestChange={(part, text, name) => requestChange(content.id, part, text, name)}
                 />
               ))
             )}
