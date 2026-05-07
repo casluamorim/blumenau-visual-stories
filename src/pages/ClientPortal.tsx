@@ -169,42 +169,40 @@ export default function ClientPortal() {
     setLoading(false);
   }
 
-  async function handleApprove(contentId: string) {
-    const { error } = await supabase
-      .from('contents')
-      .update({ status: 'approved' as any })
-      .eq('id', contentId);
-
-    if (error) {
-      toast({ title: 'Erro ao aprovar', variant: 'destructive' });
-      return;
+  async function approvePart(contentId: string, part: 'media' | 'copy') {
+    const patch: any = part === 'media' ? { media_status: 'approved' } : { copy_status: 'approved' };
+    const { error } = await supabase.from('contents').update(patch).eq('id', contentId);
+    if (error) { toast({ title: 'Erro ao aprovar', variant: 'destructive' }); return; }
+    // If both approved, mark global status as approved
+    const c = projects.flatMap(p => p.contents).find(c => c.id === contentId);
+    const newMedia = part === 'media' ? 'approved' : c?.media_status;
+    const newCopy = part === 'copy' ? 'approved' : c?.copy_status;
+    const hasCopy = !!(c?.caption && c.caption.trim());
+    if (newMedia === 'approved' && (!hasCopy || newCopy === 'approved')) {
+      await supabase.from('contents').update({ status: 'approved' as any }).eq('id', contentId);
     }
-    toast({ title: '✅ Conteúdo aprovado!' });
+    toast({ title: part === 'media' ? '✅ Mídia aprovada!' : '✅ Copy aprovada!' });
     loadPortalData();
   }
 
-  async function handleRequestRevision(contentId: string) {
-    const text = comment[contentId];
-    if (!text?.trim()) {
-      toast({ title: 'Escreva um comentário sobre a revisão', variant: 'destructive' });
+  async function requestChange(contentId: string, part: 'media' | 'copy' | 'general', text: string, authorName: string) {
+    if (!text.trim()) {
+      toast({ title: 'Escreva o que precisa ajustar', variant: 'destructive' });
       return;
     }
+    const { error: cErr } = await supabase.from('content_comments').insert({
+      content_id: contentId,
+      target: part,
+      text: text.trim(),
+      author_name: authorName.trim() || 'Cliente',
+    });
+    if (cErr) { toast({ title: 'Erro ao enviar comentário', variant: 'destructive' }); return; }
 
-    // Update status to revision
-    const { error: updateError } = await supabase
-      .from('contents')
-      .update({ status: 'revision' as any, revision_count: undefined })
-      .eq('id', contentId);
-
-    if (updateError) {
-      toast({ title: 'Erro ao solicitar revisão', variant: 'destructive' });
-      return;
+    if (part !== 'general') {
+      const patch: any = part === 'media' ? { media_status: 'change_requested' } : { copy_status: 'change_requested' };
+      await supabase.from('contents').update({ ...patch, status: 'revision' as any }).eq('id', contentId);
     }
-
-    // Note: revision count increment would be handled by a trigger in production
-
-    toast({ title: '📝 Revisão solicitada!' });
-    setComment(prev => ({ ...prev, [contentId]: '' }));
+    toast({ title: '📝 Comentário enviado!' });
     loadPortalData();
   }
 
