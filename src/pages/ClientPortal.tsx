@@ -10,7 +10,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import {
   FileText, CheckCircle, XCircle, Clock, MessageSquare,
-  FolderKanban, Send, AlertTriangle, Building2, DollarSign, Video, ExternalLink
+  FolderKanban, Send, AlertTriangle, Building2, DollarSign, Video, ExternalLink, Image
 } from 'lucide-react';
 import { getDrivePreviewUrl } from '@/lib/drive';
 
