@@ -232,12 +232,25 @@ export default function ClientPortal() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
-        <Card className="max-w-md w-full mx-4 border-slate-200">
-          <CardContent className="p-8 text-center">
-            <XCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-slate-800 mb-2">Acesso negado</h2>
-            <p className="text-slate-500">{error}</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4">
+        <Card className="max-w-md w-full border-slate-200 shadow-sm">
+          <CardContent className="p-8 text-center space-y-4">
+            <div className="mx-auto h-14 w-14 rounded-full bg-red-50 flex items-center justify-center">
+              <XCircle className="h-7 w-7 text-red-500" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-xl font-semibold text-slate-900">Link inválido ou expirado</h2>
+              <p className="text-sm text-slate-500">
+                Este link do portal não está mais ativo. Entre em contato com a equipe Racun para receber um novo link.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => window.location.href = 'https://agenciaracun.com'}
+            >
+              Voltar para o site
+            </Button>
           </CardContent>
         </Card>
       </div>

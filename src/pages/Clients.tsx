@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Search, Mail, Phone, Building2, MoreHorizontal, Edit, Trash2, Link2, Copy, Check, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Mail, Phone, Building2, MoreHorizontal, Edit, Trash2, Link2, Copy, Check, ArrowRight, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -147,6 +147,29 @@ export default function Clients() {
     toast({ title: 'Link copiado!', description: url });
   }
 
+  async function sharePortalOnWhatsApp(client: Client) {
+    // Ensure token exists & fetch slug
+    const { data: existing } = await supabase
+      .from('client_access_tokens')
+      .select('token').eq('client_id', client.id).eq('is_active', true).limit(1).maybeSingle();
+    if (!existing?.token) {
+      const { error } = await supabase
+        .from('client_access_tokens')
+        .insert({ client_id: client.id, created_by: user?.id });
+      if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
+    }
+    const { data: row } = await supabase.from('clients').select('slug').eq('id', client.id).maybeSingle();
+    if (!row?.slug) { toast({ title: 'Slug não encontrado', variant: 'destructive' }); return; }
+
+    const url = buildPortalUrl(row.slug);
+    const message = `Olá ${client.name}! 👋\n\nSeu portal Racun está pronto. Acesse direto pelo link, sem precisar fazer login:\n\n${url}`;
+    const phone = (client.phone ?? '').replace(/\D/g, '');
+    const waUrl = phone
+      ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+      : `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  }
+
   const statusColors: Record<string, string> = {
     active: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
     inactive: 'bg-red-500/10 text-red-400 border-red-500/20',
@@ -232,7 +255,10 @@ export default function Clients() {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => generatePortalLink(client.id)}>
                       {copiedId === client.id ? <Check className="mr-2 h-4 w-4" /> : <Link2 className="mr-2 h-4 w-4" />}
-                      {copiedId === client.id ? 'Link copiado!' : 'Link do Portal'}
+                      {copiedId === client.id ? 'Link copiado!' : 'Copiar link do portal'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => sharePortalOnWhatsApp(client)}>
+                      <MessageCircle className="mr-2 h-4 w-4 text-emerald-500" /> Enviar pelo WhatsApp
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => openEdit(client)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleDelete(client.id)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
