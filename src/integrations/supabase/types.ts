@@ -222,6 +222,7 @@ export type Database = {
           notes: string | null
           phone: string | null
           profile_type: string | null
+          slug: string | null
           status: Database["public"]["Enums"]["client_status"]
           total_approvals: number | null
           total_revisions: number | null
@@ -238,6 +239,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           profile_type?: string | null
+          slug?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           total_approvals?: number | null
           total_revisions?: number | null
@@ -254,6 +256,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           profile_type?: string | null
+          slug?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           total_approvals?: number | null
           total_revisions?: number | null
@@ -1093,6 +1096,10 @@ export type Database = {
         Args: { _client_id: string; _user_id: string }
         Returns: boolean
       }
+      generate_unique_client_slug: {
+        Args: { _base: string; _client_id: string }
+        Returns: string
+      }
       get_user_invite_by_token: {
         Args: { _token: string }
         Returns: {
@@ -1115,6 +1122,7 @@ export type Database = {
         Args: { _accepted_by: string; _token: string }
         Returns: undefined
       }
+      slugify: { Args: { _input: string }; Returns: string }
     }
     Enums: {
       app_role:
