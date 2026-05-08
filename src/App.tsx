@@ -75,7 +75,7 @@ const App = () => (
       <BrowserRouter>
         <Suspense fallback={<PageFallback />}>
           <Routes>
-            <Route path="/portal/:token" element={<ClientPortal />} />
+            <Route path="/portal/:slug" element={<ClientPortal />} />
             <Route path="/accept-invite/:token" element={<AcceptInvite />} />
             <Route path="/*" element={
               <AuthProvider>
