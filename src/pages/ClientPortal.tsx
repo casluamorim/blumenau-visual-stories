@@ -73,7 +73,9 @@ interface ContentData {
 }
 
 export default function ClientPortal() {
-  const { token } = useParams<{ token: string }>();
+  // Param may be a friendly slug (preferred) or a legacy hex access token.
+  const { slug: slugParam, token: tokenParam } = useParams<{ slug?: string; token?: string }>();
+  const identifier = slugParam ?? tokenParam ?? '';
   const [client, setClient] = useState<ClientData | null>(null);
   const [projects, setProjects] = useState<ProjectData[]>([]);
   const [invoicesData, setInvoicesData] = useState<any[]>([]);
@@ -83,27 +85,41 @@ export default function ClientPortal() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (token) loadPortalData();
-  }, [token]);
+    if (identifier) loadPortalData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [identifier]);
 
   async function loadPortalData() {
     setLoading(true);
 
-    // Validate token and get client
-    const { data: tokenData, error: tokenError } = await supabase
-      .from('client_access_tokens')
-      .select('client_id')
-      .eq('token', token!)
-      .eq('is_active', true)
-      .single();
+    let clientId: string | null = null;
 
-    if (tokenError || !tokenData) {
+    // Long hex string → legacy access token. Otherwise treat as slug.
+    const looksLikeToken = /^[a-f0-9]{32,}$/i.test(identifier);
+
+    if (looksLikeToken) {
+      const { data: tokenData } = await supabase
+        .from('client_access_tokens')
+        .select('client_id')
+        .eq('token', identifier)
+        .eq('is_active', true)
+        .maybeSingle();
+      clientId = tokenData?.client_id ?? null;
+    } else {
+      // Slug lookup. RLS allows anon read of clients that have an active token.
+      const { data: clientBySlug } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('slug', identifier)
+        .maybeSingle();
+      clientId = clientBySlug?.id ?? null;
+    }
+
+    if (!clientId) {
       setError('Link inválido ou expirado.');
       setLoading(false);
       return;
     }
-
-    const clientId = tokenData.client_id;
 
     // Load client info
     const { data: clientData } = await supabase
