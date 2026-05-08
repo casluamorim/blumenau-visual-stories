@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Search, Mail, Phone, Building2, MoreHorizontal, Edit, Trash2, Link2, Copy, Check, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Mail, Phone, Building2, MoreHorizontal, Edit, Trash2, Link2, Copy, Check, ArrowRight, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
