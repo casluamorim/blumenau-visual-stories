@@ -147,6 +147,29 @@ export default function Clients() {
     toast({ title: 'Link copiado!', description: url });
   }
 
+  async function sharePortalOnWhatsApp(client: Client) {
+    // Ensure token exists & fetch slug
+    const { data: existing } = await supabase
+      .from('client_access_tokens')
+      .select('token').eq('client_id', client.id).eq('is_active', true).limit(1).maybeSingle();
+    if (!existing?.token) {
+      const { error } = await supabase
+        .from('client_access_tokens')
+        .insert({ client_id: client.id, created_by: user?.id });
+      if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
+    }
+    const { data: row } = await supabase.from('clients').select('slug').eq('id', client.id).maybeSingle();
+    if (!row?.slug) { toast({ title: 'Slug não encontrado', variant: 'destructive' }); return; }
+
+    const url = buildPortalUrl(row.slug);
+    const message = `Olá ${client.name}! 👋\n\nSeu portal Racun está pronto. Acesse direto pelo link, sem precisar fazer login:\n\n${url}`;
+    const phone = (client.phone ?? '').replace(/\D/g, '');
+    const waUrl = phone
+      ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+      : `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  }
+
   const statusColors: Record<string, string> = {
     active: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
     inactive: 'bg-red-500/10 text-red-400 border-red-500/20',
