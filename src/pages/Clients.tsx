@@ -16,6 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import type { Database } from '@/integrations/supabase/types';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { buildPortalUrl } from '@/lib/portal';
 
 type Client = Database['public']['Tables']['clients']['Row'];
 type ClientInsert = Database['public']['Tables']['clients']['Insert'];
