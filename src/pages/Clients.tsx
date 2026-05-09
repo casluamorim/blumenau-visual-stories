@@ -32,6 +32,8 @@ export default function Clients() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [portalLinkDialog, setPortalLinkDialog] = useState<{ open: boolean; url: string; clientName: string; clientId: string }>({ open: false, url: '', clientName: '', clientId: '' });
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const [form, setForm] = useState<ClientInsert>({
     name: '', company: '', email: '', phone: '', status: 'active', notes: '',
