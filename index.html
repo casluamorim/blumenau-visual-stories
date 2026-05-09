@@ -14,6 +14,22 @@
   <meta name="twitter:description" content="Sistema operacional da agência Racun">
   <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/538652e6-49af-4369-8687-58fe1c195e6b/id-preview-c1cd102a--102057a3-897c-4221-9eaa-a07d0220b867.lovable.app-1777080732034.png">
   <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/538652e6-49af-4369-8687-58fe1c195e6b/id-preview-c1cd102a--102057a3-897c-4221-9eaa-a07d0220b867.lovable.app-1777080732034.png">
+  <script>
+    // Restore the original URL after the 404.html SPA redirect on GitHub Pages.
+    (function () {
+      if (window.location.search.indexOf('?/') === 0 || window.location.search.indexOf('&/') !== -1) {
+        var l = window.location;
+        var decoded = l.search.slice(1).split('&').map(function (s, i) {
+          if (i === 0 && s.charAt(0) === '/') return s.slice(1).replace(/~and~/g, '&');
+          if (s.charAt(0) === '/') return s.slice(1).replace(/~and~/g, '&');
+          return s;
+        });
+        var path = '/' + decoded[0];
+        var rest = decoded.slice(1).join('&');
+        window.history.replaceState(null, '', path + (rest ? '?' + rest : '') + l.hash);
+      }
+    })();
+  </script>
 </head>
 
   <body>
