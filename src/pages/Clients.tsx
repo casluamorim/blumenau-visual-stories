@@ -268,7 +268,19 @@ export default function Clients() {
               <CardContent className="space-y-2">
                 {client.email && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="h-3 w-3" />{client.email}</p>}
                 {client.phone && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Phone className="h-3 w-3" />{client.phone}</p>}
-                <Badge className={statusColors[client.status] ?? ''} variant="outline">{statusLabels[client.status] ?? client.status}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge className={statusColors[client.status] ?? ''} variant="outline">{statusLabels[client.status] ?? client.status}</Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 gap-1 px-2 text-xs"
+                    onClick={(e) => { e.preventDefault(); generatePortalLink(client.id); }}
+                    title="Copiar link do portal"
+                  >
+                    {copiedId === client.id ? <Check className="h-3 w-3 text-emerald-500" /> : <Link2 className="h-3 w-3" />}
+                    {copiedId === client.id ? 'Copiado' : 'Copiar link'}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
