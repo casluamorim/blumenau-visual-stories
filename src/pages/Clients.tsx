@@ -339,6 +339,36 @@ export default function Clients() {
             </div>
           </div>
         )}
+
+        {/* Portal link confirmation dialog */}
+        <Dialog open={portalLinkDialog.open} onOpenChange={(o) => setPortalLinkDialog(s => ({ ...s, open: o }))}>
+          <DialogContent className="bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="text-foreground">Link do portal</DialogTitle>
+              <DialogDescription>
+                Confira o link do portal{portalLinkDialog.clientName ? ` de ${portalLinkDialog.clientName}` : ''} antes de copiar.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label>URL completa</Label>
+              <Input
+                readOnly
+                value={portalLinkDialog.url}
+                onFocus={(e) => e.currentTarget.select()}
+                className="bg-muted border-border font-mono text-xs"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPortalLinkDialog(s => ({ ...s, open: false }))}>
+                Cancelar
+              </Button>
+              <Button onClick={confirmCopyPortalLink} className="gap-2">
+                {linkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                {linkCopied ? 'Copiado!' : 'Copiar link'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
