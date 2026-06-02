@@ -21,6 +21,8 @@ const TagsPage = lazy(() => import('./pages/TagsPage'));
 const ActivityPage = lazy(() => import('./pages/ActivityPage'));
 const ClientPortal = lazy(() => import('./pages/ClientPortal'));
 const AcceptInvite = lazy(() => import('./pages/AcceptInvite'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const ClientPortalRedirect = lazy(() => import('./pages/ClientPortalRedirect'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 const queryClient = new QueryClient({
@@ -41,10 +43,22 @@ function PageFallback() {
 }
 
 function AppRoutes() {
-  const { user, loading } = useAuth();
+  const { user, loading, role, roleLoading, isClient } = useAuth();
 
   if (loading) return <PageFallback />;
   if (!user) return <Auth />;
+  if (roleLoading) return <PageFallback />;
+
+  // Clientes: rota única (redireciona para o portal). Sem acesso ao admin.
+  if (isClient) {
+    return (
+      <Suspense fallback={<PageFallback />}>
+        <Routes>
+          <Route path="*" element={<ClientPortalRedirect />} />
+        </Routes>
+      </Suspense>
+    );
+  }
 
   return (
     <Suspense fallback={<PageFallback />}>
@@ -77,6 +91,8 @@ const App = () => (
           <Routes>
             <Route path="/portal/:slug" element={<ClientPortal />} />
             <Route path="/accept-invite/:token" element={<AcceptInvite />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/definir-senha" element={<ResetPassword />} />
             <Route path="/*" element={
               <AuthProvider>
                 <AppRoutes />
