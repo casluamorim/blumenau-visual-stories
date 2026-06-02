@@ -342,6 +342,9 @@ export default function Clients() {
                     <DropdownMenuItem onClick={() => sharePortalOnWhatsApp(client)}>
                       <MessageCircle className="mr-2 h-4 w-4 text-emerald-500" /> Enviar pelo WhatsApp
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => openAccessDialog(client)}>
+                      <KeyRound className="mr-2 h-4 w-4 text-primary" /> Acesso por senha
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => openEdit(client)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleDelete(client.id)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
                   </DropdownMenuContent>
