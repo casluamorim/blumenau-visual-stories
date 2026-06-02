@@ -212,6 +212,7 @@ export type Database = {
       }
       clients: {
         Row: {
+          auth_user_id: string | null
           avg_response_time: string | null
           company: string | null
           created_at: string
@@ -229,6 +230,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auth_user_id?: string | null
           avg_response_time?: string | null
           company?: string | null
           created_at?: string
@@ -246,6 +248,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auth_user_id?: string | null
           avg_response_time?: string | null
           company?: string | null
           created_at?: string
