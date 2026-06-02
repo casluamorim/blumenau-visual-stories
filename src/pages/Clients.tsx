@@ -204,6 +204,54 @@ export default function Clients() {
     window.open(waUrl, '_blank', 'noopener,noreferrer');
   }
 
+  function openAccessDialog(client: Client) {
+    setAccessLinkCopied(false);
+    setAccessDialog({ open: true, client, email: (client.email ?? '').trim(), loading: false, link: null });
+  }
+
+  async function generateClientAccess() {
+    if (!accessDialog.client) return;
+    const email = accessDialog.email.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      toast({ title: 'E-mail inválido', variant: 'destructive' });
+      return;
+    }
+    setAccessDialog(s => ({ ...s, loading: true }));
+    const { data, error } = await supabase.functions.invoke('client-create-access', {
+      body: {
+        client_id: accessDialog.client.id,
+        email,
+        redirect_to: `${window.location.origin}/definir-senha`,
+      },
+    });
+    setAccessDialog(s => ({ ...s, loading: false }));
+    if (error || (data as any)?.error) {
+      toast({
+        title: 'Erro ao gerar acesso',
+        description: (data as any)?.error ?? error?.message ?? 'Tente novamente.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const link = (data as any)?.action_link ?? null;
+    setAccessDialog(s => ({ ...s, link }));
+    toast({ title: 'Acesso liberado!', description: 'Compartilhe o link com o cliente.' });
+    refresh();
+  }
+
+  async function copyAccessLink() {
+    if (!accessDialog.link) return;
+    const ok = await copyToClipboard(accessDialog.link);
+    if (ok) {
+      setAccessLinkCopied(true);
+      setTimeout(() => setAccessLinkCopied(false), 2000);
+      toast({ title: 'Link copiado!' });
+    } else {
+      toast({ title: 'Não foi possível copiar', variant: 'destructive' });
+    }
+  }
+
+
   const statusColors: Record<string, string> = {
     active: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
     inactive: 'bg-red-500/10 text-red-400 border-red-500/20',
