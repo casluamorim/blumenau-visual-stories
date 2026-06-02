@@ -422,6 +422,53 @@ export default function Clients() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Client password access dialog */}
+        <Dialog open={accessDialog.open} onOpenChange={(o) => setAccessDialog(s => ({ ...s, open: o }))}>
+          <DialogContent className="bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="text-foreground">Acesso por senha</DialogTitle>
+              <DialogDescription>
+                Libere o login por e-mail e senha para {accessDialog.client?.name ?? 'este cliente'}. O cliente receberá (ou você envia manualmente) um link para definir a senha no primeiro acesso.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <Label>E-mail de acesso</Label>
+                <Input
+                  type="email"
+                  value={accessDialog.email}
+                  onChange={(e) => setAccessDialog(s => ({ ...s, email: e.target.value, link: null }))}
+                  className="bg-muted border-border"
+                  placeholder="cliente@empresa.com"
+                />
+              </div>
+              {accessDialog.link && (
+                <div className="space-y-2">
+                  <Label>Link de primeiro acesso</Label>
+                  <Input readOnly value={accessDialog.link} onFocus={(e) => e.currentTarget.select()} className="bg-muted border-border font-mono text-xs" />
+                  <p className="text-xs text-muted-foreground">Compartilhe este link com o cliente. Ao abrir, ele define a senha e entra automaticamente.</p>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAccessDialog(s => ({ ...s, open: false }))}>
+                Fechar
+              </Button>
+              {accessDialog.link ? (
+                <Button onClick={copyAccessLink} className="gap-2">
+                  {accessLinkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  {accessLinkCopied ? 'Copiado!' : 'Copiar link'}
+                </Button>
+              ) : (
+                <Button onClick={generateClientAccess} disabled={accessDialog.loading} className="gap-2">
+                  <KeyRound className="h-4 w-4" />
+                  {accessDialog.loading ? 'Gerando...' : 'Gerar acesso'}
+                </Button>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
