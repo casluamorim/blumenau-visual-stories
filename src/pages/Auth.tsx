@@ -4,28 +4,32 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Auth() {
-  const [isLogin, setIsLogin] = useState(true);
+  const [mode, setMode] = useState<'login' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const { signIn } = useAuth();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      if (isLogin) {
+      if (mode === 'login') {
         await signIn(email, password);
       } else {
-        await signUp(email, password, fullName);
-        toast({
-          title: 'Conta criada!',
-          description: 'Verifique seu email para confirmar o cadastro.',
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
         });
+        if (error) throw error;
+        toast({
+          title: 'Link enviado',
+          description: 'Verifique seu e-mail para redefinir a senha.',
+        });
+        setMode('login');
       }
     } catch (error: any) {
       toast({
@@ -46,20 +50,11 @@ export default function Auth() {
             Racun<span className="text-primary">.</span>
           </CardTitle>
           <CardDescription className="text-muted-foreground">
-            {isLogin ? 'Entre na sua conta' : 'Crie sua conta'}
+            {mode === 'login' ? 'Entre na sua conta' : 'Recuperar acesso'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <Input
-                placeholder="Nome completo"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required={!isLogin}
-                className="bg-muted border-border"
-              />
-            )}
             <Input
               type="email"
               placeholder="Email"
@@ -68,24 +63,30 @@ export default function Auth() {
               required
               className="bg-muted border-border"
             />
-            <Input
-              type="password"
-              placeholder="Senha"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="bg-muted border-border"
-            />
+            {mode === 'login' && (
+              <Input
+                type="password"
+                placeholder="Senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                className="bg-muted border-border"
+              />
+            )}
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Carregando...' : isLogin ? 'Entrar' : 'Criar conta'}
+              {loading
+                ? 'Carregando...'
+                : mode === 'login'
+                  ? 'Entrar'
+                  : 'Enviar link de recuperação'}
             </Button>
           </form>
           <button
-            onClick={() => setIsLogin(!isLogin)}
+            onClick={() => setMode(mode === 'login' ? 'forgot' : 'login')}
             className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-primary transition-colors"
           >
-            {isLogin ? 'Não tem conta? Criar agora' : 'Já tem conta? Entrar'}
+            {mode === 'login' ? 'Esqueci minha senha' : 'Voltar para login'}
           </button>
         </CardContent>
       </Card>
