@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Search, Mail, Phone, Building2, MoreHorizontal, Edit, Trash2, Link2, Copy, Check, ArrowRight, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
+import { Plus, Search, Mail, Phone, Building2, MoreHorizontal, Edit, Trash2, Link2, Copy, Check, ArrowRight, ChevronLeft, ChevronRight, MessageCircle, KeyRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -34,6 +34,8 @@ export default function Clients() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [portalLinkDialog, setPortalLinkDialog] = useState<{ open: boolean; url: string; clientName: string; clientId: string }>({ open: false, url: '', clientName: '', clientId: '' });
   const [linkCopied, setLinkCopied] = useState(false);
+  const [accessDialog, setAccessDialog] = useState<{ open: boolean; client: Client | null; email: string; loading: boolean; link: string | null }>({ open: false, client: null, email: '', loading: false, link: null });
+  const [accessLinkCopied, setAccessLinkCopied] = useState(false);
 
   const [form, setForm] = useState<ClientInsert>({
     name: '', company: '', email: '', phone: '', status: 'active', notes: '',
@@ -202,6 +204,54 @@ export default function Clients() {
     window.open(waUrl, '_blank', 'noopener,noreferrer');
   }
 
+  function openAccessDialog(client: Client) {
+    setAccessLinkCopied(false);
+    setAccessDialog({ open: true, client, email: (client.email ?? '').trim(), loading: false, link: null });
+  }
+
+  async function generateClientAccess() {
+    if (!accessDialog.client) return;
+    const email = accessDialog.email.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      toast({ title: 'E-mail inválido', variant: 'destructive' });
+      return;
+    }
+    setAccessDialog(s => ({ ...s, loading: true }));
+    const { data, error } = await supabase.functions.invoke('client-create-access', {
+      body: {
+        client_id: accessDialog.client.id,
+        email,
+        redirect_to: `${window.location.origin}/definir-senha`,
+      },
+    });
+    setAccessDialog(s => ({ ...s, loading: false }));
+    if (error || (data as any)?.error) {
+      toast({
+        title: 'Erro ao gerar acesso',
+        description: (data as any)?.error ?? error?.message ?? 'Tente novamente.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const link = (data as any)?.action_link ?? null;
+    setAccessDialog(s => ({ ...s, link }));
+    toast({ title: 'Acesso liberado!', description: 'Compartilhe o link com o cliente.' });
+    refresh();
+  }
+
+  async function copyAccessLink() {
+    if (!accessDialog.link) return;
+    const ok = await copyToClipboard(accessDialog.link);
+    if (ok) {
+      setAccessLinkCopied(true);
+      setTimeout(() => setAccessLinkCopied(false), 2000);
+      toast({ title: 'Link copiado!' });
+    } else {
+      toast({ title: 'Não foi possível copiar', variant: 'destructive' });
+    }
+  }
+
+
   const statusColors: Record<string, string> = {
     active: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
     inactive: 'bg-red-500/10 text-red-400 border-red-500/20',
@@ -292,6 +342,9 @@ export default function Clients() {
                     <DropdownMenuItem onClick={() => sharePortalOnWhatsApp(client)}>
                       <MessageCircle className="mr-2 h-4 w-4 text-emerald-500" /> Enviar pelo WhatsApp
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => openAccessDialog(client)}>
+                      <KeyRound className="mr-2 h-4 w-4 text-primary" /> Acesso por senha
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => openEdit(client)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleDelete(client.id)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
                   </DropdownMenuContent>
@@ -366,6 +419,53 @@ export default function Clients() {
                 {linkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 {linkCopied ? 'Copiado!' : 'Copiar link'}
               </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Client password access dialog */}
+        <Dialog open={accessDialog.open} onOpenChange={(o) => setAccessDialog(s => ({ ...s, open: o }))}>
+          <DialogContent className="bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="text-foreground">Acesso por senha</DialogTitle>
+              <DialogDescription>
+                Libere o login por e-mail e senha para {accessDialog.client?.name ?? 'este cliente'}. O cliente receberá (ou você envia manualmente) um link para definir a senha no primeiro acesso.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <Label>E-mail de acesso</Label>
+                <Input
+                  type="email"
+                  value={accessDialog.email}
+                  onChange={(e) => setAccessDialog(s => ({ ...s, email: e.target.value, link: null }))}
+                  className="bg-muted border-border"
+                  placeholder="cliente@empresa.com"
+                />
+              </div>
+              {accessDialog.link && (
+                <div className="space-y-2">
+                  <Label>Link de primeiro acesso</Label>
+                  <Input readOnly value={accessDialog.link} onFocus={(e) => e.currentTarget.select()} className="bg-muted border-border font-mono text-xs" />
+                  <p className="text-xs text-muted-foreground">Compartilhe este link com o cliente. Ao abrir, ele define a senha e entra automaticamente.</p>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAccessDialog(s => ({ ...s, open: false }))}>
+                Fechar
+              </Button>
+              {accessDialog.link ? (
+                <Button onClick={copyAccessLink} className="gap-2">
+                  {accessLinkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  {accessLinkCopied ? 'Copiado!' : 'Copiar link'}
+                </Button>
+              ) : (
+                <Button onClick={generateClientAccess} disabled={accessDialog.loading} className="gap-2">
+                  <KeyRound className="h-4 w-4" />
+                  {accessDialog.loading ? 'Gerando...' : 'Gerar acesso'}
+                </Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
