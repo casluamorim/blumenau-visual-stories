@@ -98,15 +98,42 @@
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
 
 .animate-fade-in {
   animation: fade-in 0.3s ease-out;
 }
 
-/* Responsive helpers */
+/* Premium dashboard utilities */
 @layer utilities {
   .page-title {
-    @apply font-display text-2xl md:text-3xl font-bold text-foreground;
+    @apply font-display text-2xl md:text-3xl font-bold text-foreground tracking-tight;
+  }
+  .card-premium {
+    @apply relative overflow-hidden rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm transition-all;
+    box-shadow:
+      0 1px 0 hsl(0 0% 100% / 0.04) inset,
+      0 20px 40px -24px hsl(0 0% 0% / 0.6);
+  }
+  .card-premium:hover {
+    @apply border-border;
+    box-shadow:
+      0 1px 0 hsl(0 0% 100% / 0.06) inset,
+      0 24px 60px -28px hsl(var(--primary) / 0.35);
+  }
+  .text-gradient-premium {
+    background: linear-gradient(135deg, hsl(var(--foreground)) 0%, hsl(var(--muted-foreground)) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .skeleton-shimmer {
+    background: linear-gradient(90deg, hsl(var(--muted)) 0%, hsl(var(--muted) / 0.6) 50%, hsl(var(--muted)) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
   }
 }
 
