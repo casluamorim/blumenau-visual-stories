@@ -427,14 +427,89 @@ export default function Financial() {
     loadData();
   }
 
-  // Stats
-  const pjInvoices = invoices.filter(i => (i.financial_type ?? 'pj') === 'pj');
-  const totalPending = pjInvoices.filter(i => i.status === 'pending').reduce((a, i) => a + Number(i.amount), 0);
-  const totalPaid = pjInvoices.filter(i => i.status === 'paid').reduce((a, i) => a + Number(i.amount), 0);
-  const totalOverdue = pjInvoices.filter(i => i.status === 'overdue').reduce((a, i) => a + Number(i.amount), 0);
-  const totalQuotes = quotes.filter(q => q.status === 'sent' || q.status === 'draft').reduce((a, q) => a + Number(q.total_value), 0);
-  const totalExpenses = expenses.filter(e => e.status === 'paid').reduce((a, e) => a + Number(e.amount), 0);
-  const profit = totalPaid - totalExpenses;
+  // --- Monthly competence state ---
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const [showFuture, setShowFuture] = useState(false);
+  const monthsToShow = showFuture ? 4 : 1;
+
+  const pjInvoices = useMemo(
+    () => invoices.filter(i => (i.financial_type ?? 'pj') === 'pj'),
+    [invoices]
+  );
+
+  const monthInvoiceOccs = useMemo(
+    () => expandOccurrencesForMonth(pjInvoices as any[], selectedMonth),
+    [pjInvoices, selectedMonth]
+  );
+  const monthExpenseOccs = useMemo(
+    () => expandOccurrencesForMonth(expenses as any[], selectedMonth),
+    [expenses, selectedMonth]
+  );
+  const invoiceOccs = useMemo(
+    () => expandOccurrencesForMonths(pjInvoices as any[], selectedMonth, monthsToShow),
+    [pjInvoices, selectedMonth, monthsToShow]
+  );
+  const expenseOccs = useMemo(
+    () => expandOccurrencesForMonths(expenses as any[], selectedMonth, monthsToShow),
+    [expenses, selectedMonth, monthsToShow]
+  );
+
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const resolveStatus = (occ: Occurrence<any>) => {
+    if (occ.virtual && occ.occurrence_date < todayStr) return 'overdue';
+    return occ.status;
+  };
+
+  const monthStats = useMemo(() => {
+    let recebido = 0, pendente = 0, atrasado = 0, despPagas = 0, despPrev = 0;
+    for (const o of monthInvoiceOccs) {
+      const st = resolveStatus(o);
+      const v = Number(o.item.amount) || 0;
+      if (st === 'paid') recebido += v;
+      else if (st === 'overdue') atrasado += v;
+      else if (st !== 'cancelled') pendente += v;
+    }
+    for (const o of monthExpenseOccs) {
+      const st = resolveStatus(o);
+      const v = Number(o.item.amount) || 0;
+      if (st === 'paid') despPagas += v;
+      else despPrev += v;
+    }
+    const receitaPrevista = recebido + pendente + atrasado;
+    const despesaPrevista = despPagas + despPrev;
+    const lucroPrevisto = receitaPrevista - despesaPrevista;
+    return { recebido, pendente, atrasado, despPagas, despPrev, receitaPrevista, despesaPrevista, lucroPrevisto };
+  }, [monthInvoiceOccs, monthExpenseOccs]);
+
+  const totalQuotes = quotes
+    .filter(q => q.status === 'sent' || q.status === 'draft')
+    .reduce((a, q) => a + Number(q.total_value), 0);
+
+  async function materializeInvoicePaid(occ: Occurrence<any>) {
+    const it = occ.item;
+    const { error } = await supabase.from('invoices').insert({
+      client_id: it.client_id, quote_id: null, title: it.title, amount: it.amount,
+      due_date: occ.occurrence_date, status: 'paid' as any,
+      paid_at: new Date().toISOString(), payment_method: 'pix' as any, notes: it.notes,
+      recurrence: 'one_time' as any, parent_invoice_id: it.id,
+      project_id: it.project_id ?? null,
+      financial_type: (it.financial_type ?? 'pj') as any, created_by: user?.id,
+    });
+    if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
+    toast({ title: 'Cobrança recorrente marcada como paga!' }); loadData();
+  }
+  async function materializeExpensePaid(occ: Occurrence<any>) {
+    const it = occ.item;
+    const { error } = await supabase.from('expenses').insert({
+      description: it.description, amount: it.amount, category: it.category,
+      financial_type: it.financial_type, due_date: occ.occurrence_date,
+      status: 'paid' as any, recurrence: 'one_time' as any,
+      parent_expense_id: it.id, client_id: it.client_id, project_id: it.project_id,
+      notes: it.notes, created_by: user?.id,
+    });
+    if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
+    toast({ title: 'Despesa recorrente marcada como paga!' }); loadData();
+  }
 
   const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
