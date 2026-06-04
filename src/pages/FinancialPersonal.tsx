@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,8 +15,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Plus, Trash2, Edit, CheckCircle, Clock, AlertTriangle, TrendingUp, TrendingDown,
-  DollarSign, RefreshCw, Search, Paperclip
+  DollarSign, RefreshCw, Search, Paperclip, Sparkles
 } from 'lucide-react';
+import { MonthNavigator } from '@/components/financial/MonthNavigator';
+import {
+  expandOccurrencesForMonth, expandOccurrencesForMonths, monthLabel, Occurrence,
+} from '@/lib/financialMonthly';
+import { format, parseISO } from 'date-fns';
 
 interface PFIncome {
   id: string; description: string; amount: number; category: string | null;
