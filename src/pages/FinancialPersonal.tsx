@@ -98,9 +98,76 @@ export default function FinancialPersonal() {
   }
 
   const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  const totalIncPaid = incomes.filter(i => i.status === 'paid').reduce((a, i) => a + Number(i.amount), 0);
-  const totalExpPaid = expenses.filter(e => e.status === 'paid').reduce((a, e) => a + Number(e.amount), 0);
-  const balance = totalIncPaid - totalExpPaid;
+
+  // --- Monthly competence state ---
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const [showFuture, setShowFuture] = useState(false);
+  const monthsToShow = showFuture ? 4 : 1;
+
+  const monthIncomeOccs = useMemo(
+    () => expandOccurrencesForMonth(incomes as any[], selectedMonth),
+    [incomes, selectedMonth]
+  );
+  const monthExpenseOccs = useMemo(
+    () => expandOccurrencesForMonth(expenses as any[], selectedMonth),
+    [expenses, selectedMonth]
+  );
+  const incomeOccs = useMemo(
+    () => expandOccurrencesForMonths(incomes as any[], selectedMonth, monthsToShow),
+    [incomes, selectedMonth, monthsToShow]
+  );
+  const expenseOccs = useMemo(
+    () => expandOccurrencesForMonths(expenses as any[], selectedMonth, monthsToShow),
+    [expenses, selectedMonth, monthsToShow]
+  );
+
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const resolveStatus = (occ: Occurrence<any>) => {
+    if (occ.virtual && occ.occurrence_date < todayStr) return 'overdue';
+    return occ.status;
+  };
+
+  const monthStats = useMemo(() => {
+    let incRecebido = 0, incPrevisto = 0, expPagas = 0, expPrevistas = 0;
+    for (const o of monthIncomeOccs) {
+      const v = Number(o.item.amount) || 0;
+      if (resolveStatus(o) === 'paid') incRecebido += v;
+      else incPrevisto += v;
+    }
+    for (const o of monthExpenseOccs) {
+      const v = Number(o.item.amount) || 0;
+      if (resolveStatus(o) === 'paid') expPagas += v;
+      else expPrevistas += v;
+    }
+    return {
+      incRecebido, incPrevisto, expPagas, expPrevistas,
+      saldoReal: incRecebido - expPagas,
+      saldoPrevisto: (incRecebido + incPrevisto) - (expPagas + expPrevistas),
+    };
+  }, [monthIncomeOccs, monthExpenseOccs]);
+
+  async function materializeIncomePaid(occ: Occurrence<any>) {
+    const it = occ.item;
+    const { error } = await supabase.from('personal_income').insert({
+      description: it.description, amount: it.amount, category: it.category,
+      due_date: occ.occurrence_date, status: 'paid' as any,
+      recurrence: 'one_time' as any, parent_income_id: it.id,
+      notes: it.notes, created_by: user?.id,
+    });
+    if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
+    toast({ title: 'Receita recorrente marcada como paga!' }); loadData();
+  }
+  async function materializeExpensePaidPF(occ: Occurrence<any>) {
+    const it = occ.item;
+    const { error } = await supabase.from('expenses').insert({
+      description: it.description, amount: it.amount, category: it.category,
+      financial_type: 'pf' as any, due_date: occ.occurrence_date,
+      status: 'paid' as any, recurrence: 'one_time' as any,
+      parent_expense_id: it.id, notes: it.notes, created_by: user?.id,
+    });
+    if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
+    toast({ title: 'Despesa recorrente marcada como paga!' }); loadData();
+  }
 
   // Income CRUD
   function openNewIncome() {
