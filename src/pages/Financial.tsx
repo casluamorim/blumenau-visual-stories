@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,8 +16,17 @@ import { useAuth } from '@/hooks/useAuth';
 import {
   Plus, DollarSign, FileText, Receipt, Trash2, Edit, AlertTriangle,
   CheckCircle, Clock, XCircle, TrendingUp, TrendingDown, Search,
-  MessageCircle, CreditCard, RefreshCw, Paperclip, Upload
+  MessageCircle, RefreshCw, Paperclip, Sparkles
 } from 'lucide-react';
+import { MonthNavigator } from '@/components/financial/MonthNavigator';
+import {
+  expandOccurrencesForMonth,
+  expandOccurrencesForMonths,
+  monthLabel,
+  monthKey,
+  Occurrence,
+} from '@/lib/financialMonthly';
+import { format, parseISO } from 'date-fns';
 
 // Types
 interface Quote {
