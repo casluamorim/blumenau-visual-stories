@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,8 +16,16 @@ import { useAuth } from '@/hooks/useAuth';
 import {
   Plus, DollarSign, FileText, Receipt, Trash2, Edit, AlertTriangle,
   CheckCircle, Clock, XCircle, TrendingUp, TrendingDown, Search,
-  MessageCircle, CreditCard, RefreshCw, Paperclip, Upload
+  MessageCircle, RefreshCw, Paperclip, Sparkles
 } from 'lucide-react';
+import { MonthNavigator } from '@/components/financial/MonthNavigator';
+import {
+  expandOccurrencesForMonth,
+  expandOccurrencesForMonths,
+  monthLabel,
+  Occurrence,
+} from '@/lib/financialMonthly';
+import { format, parseISO } from 'date-fns';
 
 // Types
 interface Quote {
@@ -418,14 +426,89 @@ export default function Financial() {
     loadData();
   }
 
-  // Stats
-  const pjInvoices = invoices.filter(i => (i.financial_type ?? 'pj') === 'pj');
-  const totalPending = pjInvoices.filter(i => i.status === 'pending').reduce((a, i) => a + Number(i.amount), 0);
-  const totalPaid = pjInvoices.filter(i => i.status === 'paid').reduce((a, i) => a + Number(i.amount), 0);
-  const totalOverdue = pjInvoices.filter(i => i.status === 'overdue').reduce((a, i) => a + Number(i.amount), 0);
-  const totalQuotes = quotes.filter(q => q.status === 'sent' || q.status === 'draft').reduce((a, q) => a + Number(q.total_value), 0);
-  const totalExpenses = expenses.filter(e => e.status === 'paid').reduce((a, e) => a + Number(e.amount), 0);
-  const profit = totalPaid - totalExpenses;
+  // --- Monthly competence state ---
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const [showFuture, setShowFuture] = useState(false);
+  const monthsToShow = showFuture ? 4 : 1;
+
+  const pjInvoices = useMemo(
+    () => invoices.filter(i => (i.financial_type ?? 'pj') === 'pj'),
+    [invoices]
+  );
+
+  const monthInvoiceOccs = useMemo(
+    () => expandOccurrencesForMonth(pjInvoices as any[], selectedMonth),
+    [pjInvoices, selectedMonth]
+  );
+  const monthExpenseOccs = useMemo(
+    () => expandOccurrencesForMonth(expenses as any[], selectedMonth),
+    [expenses, selectedMonth]
+  );
+  const invoiceOccs = useMemo(
+    () => expandOccurrencesForMonths(pjInvoices as any[], selectedMonth, monthsToShow),
+    [pjInvoices, selectedMonth, monthsToShow]
+  );
+  const expenseOccs = useMemo(
+    () => expandOccurrencesForMonths(expenses as any[], selectedMonth, monthsToShow),
+    [expenses, selectedMonth, monthsToShow]
+  );
+
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const resolveStatus = (occ: Occurrence<any>) => {
+    if (occ.virtual && occ.occurrence_date < todayStr) return 'overdue';
+    return occ.status;
+  };
+
+  const monthStats = useMemo(() => {
+    let recebido = 0, pendente = 0, atrasado = 0, despPagas = 0, despPrev = 0;
+    for (const o of monthInvoiceOccs) {
+      const st = resolveStatus(o);
+      const v = Number(o.item.amount) || 0;
+      if (st === 'paid') recebido += v;
+      else if (st === 'overdue') atrasado += v;
+      else if (st !== 'cancelled') pendente += v;
+    }
+    for (const o of monthExpenseOccs) {
+      const st = resolveStatus(o);
+      const v = Number(o.item.amount) || 0;
+      if (st === 'paid') despPagas += v;
+      else despPrev += v;
+    }
+    const receitaPrevista = recebido + pendente + atrasado;
+    const despesaPrevista = despPagas + despPrev;
+    const lucroPrevisto = receitaPrevista - despesaPrevista;
+    return { recebido, pendente, atrasado, despPagas, despPrev, receitaPrevista, despesaPrevista, lucroPrevisto };
+  }, [monthInvoiceOccs, monthExpenseOccs]);
+
+  const totalQuotes = quotes
+    .filter(q => q.status === 'sent' || q.status === 'draft')
+    .reduce((a, q) => a + Number(q.total_value), 0);
+
+  async function materializeInvoicePaid(occ: Occurrence<any>) {
+    const it = occ.item;
+    const { error } = await supabase.from('invoices').insert({
+      client_id: it.client_id, quote_id: null, title: it.title, amount: it.amount,
+      due_date: occ.occurrence_date, status: 'paid' as any,
+      paid_at: new Date().toISOString(), payment_method: 'pix' as any, notes: it.notes,
+      recurrence: 'one_time' as any, parent_invoice_id: it.id,
+      project_id: it.project_id ?? null,
+      financial_type: (it.financial_type ?? 'pj') as any, created_by: user?.id,
+    });
+    if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
+    toast({ title: 'Cobrança recorrente marcada como paga!' }); loadData();
+  }
+  async function materializeExpensePaid(occ: Occurrence<any>) {
+    const it = occ.item;
+    const { error } = await supabase.from('expenses').insert({
+      description: it.description, amount: it.amount, category: it.category,
+      financial_type: it.financial_type, due_date: occ.occurrence_date,
+      status: 'paid' as any, recurrence: 'one_time' as any,
+      parent_expense_id: it.id, client_id: it.client_id, project_id: it.project_id,
+      notes: it.notes, created_by: user?.id,
+    });
+    if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
+    toast({ title: 'Despesa recorrente marcada como paga!' }); loadData();
+  }
 
   const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -439,42 +522,69 @@ export default function Financial() {
           </div>
         </div>
 
-        {/* Stats */}
+        {/* Month navigator */}
+        <MonthNavigator
+          value={selectedMonth}
+          onChange={setSelectedMonth}
+          showFuture={showFuture}
+          onShowFutureChange={setShowFuture}
+        />
+
+        {/* Stats — selected month only */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <Card className="border-border bg-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Orçamentos Abertos</CardTitle>
-              <FileText className="h-5 w-5 text-blue-400" />
-            </CardHeader>
-            <CardContent><div className="text-2xl font-bold text-foreground">{fmt(totalQuotes)}</div></CardContent>
-          </Card>
-          <Card className="border-border bg-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Pendente</CardTitle>
-              <Clock className="h-5 w-5 text-amber-400" />
-            </CardHeader>
-            <CardContent><div className="text-2xl font-bold text-foreground">{fmt(totalPending)}</div></CardContent>
-          </Card>
-          <Card className="border-border bg-card">
+          <Card className="card-premium">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Recebido</CardTitle>
               <TrendingUp className="h-5 w-5 text-emerald-400" />
             </CardHeader>
-            <CardContent><div className="text-2xl font-bold text-foreground">{fmt(totalPaid)}</div></CardContent>
+            <CardContent>
+              <div className="text-2xl font-bold text-emerald-400">{fmt(monthStats.recebido)}</div>
+              <p className="text-xs text-muted-foreground mt-1">Em {monthLabel(selectedMonth)}</p>
+            </CardContent>
           </Card>
-          <Card className="border-border bg-card">
+          <Card className="card-premium">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Despesas PJ</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Pendente</CardTitle>
+              <Clock className="h-5 w-5 text-amber-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">{fmt(monthStats.pendente + monthStats.atrasado)}</div>
+              {monthStats.atrasado > 0 && (
+                <p className="text-xs text-destructive mt-1">{fmt(monthStats.atrasado)} em atraso</p>
+              )}
+            </CardContent>
+          </Card>
+          <Card className="card-premium">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Despesas</CardTitle>
               <TrendingDown className="h-5 w-5 text-destructive" />
             </CardHeader>
-            <CardContent><div className="text-2xl font-bold text-foreground">{fmt(totalExpenses)}</div></CardContent>
+            <CardContent>
+              <div className="text-2xl font-bold text-destructive">{fmt(monthStats.despesaPrevista)}</div>
+              <p className="text-xs text-muted-foreground mt-1">{fmt(monthStats.despPagas)} pagas</p>
+            </CardContent>
           </Card>
-          <Card className="border-border bg-card">
+          <Card className="card-premium">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Lucro</CardTitle>
-              <DollarSign className={`h-5 w-5 ${profit >= 0 ? 'text-emerald-400' : 'text-destructive'}`} />
+              <CardTitle className="text-sm font-medium text-muted-foreground">Lucro previsto</CardTitle>
+              <DollarSign className={`h-5 w-5 ${monthStats.lucroPrevisto >= 0 ? 'text-emerald-400' : 'text-destructive'}`} />
             </CardHeader>
-            <CardContent><div className={`text-2xl font-bold ${profit >= 0 ? 'text-emerald-400' : 'text-destructive'}`}>{fmt(profit)}</div></CardContent>
+            <CardContent>
+              <div className={`text-2xl font-bold ${monthStats.lucroPrevisto >= 0 ? 'text-emerald-400' : 'text-destructive'}`}>
+                {fmt(monthStats.lucroPrevisto)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Receita - despesa do mês</p>
+            </CardContent>
+          </Card>
+          <Card className="card-premium">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Orçamentos abertos</CardTitle>
+              <FileText className="h-5 w-5 text-blue-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">{fmt(totalQuotes)}</div>
+              <p className="text-xs text-muted-foreground mt-1">Total geral</p>
+            </CardContent>
           </Card>
         </div>
 
@@ -482,7 +592,7 @@ export default function Financial() {
         <Tabs defaultValue="invoices" className="space-y-4">
           <div className="flex items-start sm:items-center justify-between gap-3 flex-col sm:flex-row">
             <TabsList className="w-full sm:w-auto overflow-x-auto">
-              <TabsTrigger value="invoices">Faturas</TabsTrigger>
+              <TabsTrigger value="invoices">Receitas</TabsTrigger>
               <TabsTrigger value="expenses">Despesas</TabsTrigger>
               <TabsTrigger value="quotes">Orçamentos</TabsTrigger>
             </TabsList>
@@ -498,90 +608,119 @@ export default function Financial() {
           {/* INVOICES TAB */}
           <TabsContent value="invoices" className="space-y-4">
             <div className="flex justify-end">
-              <Button onClick={openNewInvoice}><Plus className="mr-2 h-4 w-4" /> Nova Fatura</Button>
+              <Button onClick={openNewInvoice}><Plus className="mr-2 h-4 w-4" /> Nova Receita</Button>
             </div>
-            <Card className="border-border bg-card overflow-hidden">
-              <div className="table-scroll"><Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Título</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Vencimento</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Pagamento</TableHead>
-                    <TableHead className="w-36">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pjInvoices
-                    .filter(i => !search || i.title.toLowerCase().includes(search.toLowerCase()) ||
-                      i.clients?.name.toLowerCase().includes(search.toLowerCase()) ||
-                      i.clients?.company?.toLowerCase().includes(search.toLowerCase()))
-                    .map(inv => {
-                      const st = invoiceStatusConfig[inv.status] ?? invoiceStatusConfig.pending;
-                      const StIcon = st.icon;
-                      return (
-                        <TableRow key={inv.id}>
-                          <TableCell className="font-medium text-foreground">{inv.title}</TableCell>
-                          <TableCell>{clientDisplay(inv.clients)}</TableCell>
-                          <TableCell className="font-medium text-foreground">{fmt(Number(inv.amount))}</TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {new Date(inv.due_date).toLocaleDateString('pt-BR')}
-                          </TableCell>
-                          <TableCell>
-                            {inv.recurrence === 'recurring' ? (
-                              <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
-                                <RefreshCw className="mr-1 h-3 w-3" />Recorrente
-                              </Badge>
-                            ) : (
-                              <span className="text-muted-foreground text-xs">Única</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={st.color}>
-                              <StIcon className="mr-1 h-3 w-3" />{st.label}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {inv.payment_method ? paymentMethods[inv.payment_method] ?? inv.payment_method : '—'}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              {inv.status !== 'paid' && inv.status !== 'cancelled' && (
-                                <>
-                                  <Button variant="ghost" size="icon" title="Marcar como pago"
-                                    onClick={() => markInvoicePaid(inv)}>
-                                    <CheckCircle className="h-4 w-4 text-emerald-500" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" title="Enviar WhatsApp"
-                                    onClick={() => sendWhatsApp(inv)}>
-                                    <MessageCircle className="h-4 w-4 text-green-500" />
-                                  </Button>
-                                </>
+            {(() => {
+              const filtered = invoiceOccs.filter(o => {
+                if (!search) return true;
+                const s = search.toLowerCase();
+                return o.item.title?.toLowerCase().includes(s)
+                  || o.item.clients?.name?.toLowerCase().includes(s)
+                  || o.item.clients?.company?.toLowerCase().includes(s);
+              });
+              const groups = new Map<string, typeof filtered>();
+              for (const o of filtered) {
+                const arr = groups.get(o.competence) ?? [];
+                arr.push(o); groups.set(o.competence, arr);
+              }
+              const keys = Array.from(groups.keys()).sort();
+              if (keys.length === 0) {
+                return (
+                  <Card className="card-premium p-10 text-center text-muted-foreground">
+                    Nenhuma receita em {monthLabel(selectedMonth)}.
+                  </Card>
+                );
+              }
+              return keys.map(k => (
+                <Card key={k} className="card-premium overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
+                    <h3 className="font-semibold text-foreground">{monthLabel(parseISO(k + '-01'))}</h3>
+                    <span className="text-xs text-muted-foreground">{groups.get(k)!.length} lançamento(s)</span>
+                  </div>
+                  <div className="table-scroll"><Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Título</TableHead>
+                        <TableHead>Cliente</TableHead>
+                        <TableHead>Valor</TableHead>
+                        <TableHead>Vencimento</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Pagamento</TableHead>
+                        <TableHead className="w-36">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {groups.get(k)!.map((occ, idx) => {
+                        const inv = occ.item;
+                        const st = invoiceStatusConfig[resolveStatus(occ)] ?? invoiceStatusConfig.pending;
+                        const StIcon = st.icon;
+                        return (
+                          <TableRow key={`${inv.id}-${occ.occurrence_date}-${idx}`}>
+                            <TableCell className="font-medium text-foreground">
+                              <div className="flex items-center gap-2">
+                                {inv.title}
+                                {occ.virtual && (
+                                  <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px]">
+                                    <Sparkles className="mr-1 h-2.5 w-2.5" />Previsto
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>{clientDisplay(inv.clients)}</TableCell>
+                            <TableCell className="font-medium text-foreground">{fmt(Number(inv.amount))}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {new Date(occ.occurrence_date).toLocaleDateString('pt-BR')}
+                            </TableCell>
+                            <TableCell>
+                              {inv.recurrence === 'recurring' ? (
+                                <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                                  <RefreshCw className="mr-1 h-3 w-3" />Recorrente
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">Única</span>
                               )}
-                              <Button variant="ghost" size="icon" onClick={() => openEditInvoice(inv)}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => deleteInvoice(inv.id)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  {pjInvoices.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                        Nenhuma fatura cadastrada
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table></div>
-            </Card>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={st.color}>
+                                <StIcon className="mr-1 h-3 w-3" />{st.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {!occ.virtual && inv.payment_method ? paymentMethods[inv.payment_method] ?? inv.payment_method : '—'}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                {resolveStatus(occ) !== 'paid' && resolveStatus(occ) !== 'cancelled' && (
+                                  <>
+                                    <Button variant="ghost" size="icon" title="Marcar como pago"
+                                      onClick={() => occ.virtual ? materializeInvoicePaid(occ) : markInvoicePaid(inv)}>
+                                      <CheckCircle className="h-4 w-4 text-emerald-500" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" title="Enviar WhatsApp"
+                                      onClick={() => sendWhatsApp(inv)}>
+                                      <MessageCircle className="h-4 w-4 text-green-500" />
+                                    </Button>
+                                  </>
+                                )}
+                                <Button variant="ghost" size="icon" onClick={() => openEditInvoice(inv)}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                {!occ.virtual && (
+                                  <Button variant="ghost" size="icon" onClick={() => deleteInvoice(inv.id)}>
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table></div>
+                </Card>
+              ));
+            })()}
           </TabsContent>
 
           {/* EXPENSES TAB */}
@@ -589,92 +728,119 @@ export default function Financial() {
             <div className="flex justify-end">
               <Button onClick={openNewExpense}><Plus className="mr-2 h-4 w-4" /> Nova Despesa</Button>
             </div>
-            <Card className="border-border bg-card overflow-hidden">
-              <div className="table-scroll"><Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Vencimento</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Cliente/Projeto</TableHead>
-                    <TableHead className="w-28">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {expenses
-                    .filter(e => !search || e.description.toLowerCase().includes(search.toLowerCase()) ||
-                      e.category?.toLowerCase().includes(search.toLowerCase()))
-                    .map(exp => {
-                      const st = expenseStatusConfig[exp.status] ?? expenseStatusConfig.pending;
-                      const StIcon = st.icon;
-                      return (
-                        <TableRow key={exp.id}>
-                          <TableCell className="font-medium text-foreground">
-                            <div className="flex items-center gap-2">
-                              {exp.description}
-                              {exp.attachment_url && (
-                                <a href={exp.attachment_url} target="_blank" rel="noopener noreferrer">
-                                  <Paperclip className="h-3 w-3 text-muted-foreground" />
-                                </a>
+            {(() => {
+              const filtered = expenseOccs.filter(o => {
+                if (!search) return true;
+                const s = search.toLowerCase();
+                return o.item.description?.toLowerCase().includes(s)
+                  || o.item.category?.toLowerCase().includes(s);
+              });
+              const groups = new Map<string, typeof filtered>();
+              for (const o of filtered) {
+                const arr = groups.get(o.competence) ?? [];
+                arr.push(o); groups.set(o.competence, arr);
+              }
+              const keys = Array.from(groups.keys()).sort();
+              if (keys.length === 0) {
+                return (
+                  <Card className="card-premium p-10 text-center text-muted-foreground">
+                    Nenhuma despesa em {monthLabel(selectedMonth)}.
+                  </Card>
+                );
+              }
+              return keys.map(k => (
+                <Card key={k} className="card-premium overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
+                    <h3 className="font-semibold text-foreground">{monthLabel(parseISO(k + '-01'))}</h3>
+                    <span className="text-xs text-muted-foreground">{groups.get(k)!.length} lançamento(s)</span>
+                  </div>
+                  <div className="table-scroll"><Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead>Categoria</TableHead>
+                        <TableHead>Valor</TableHead>
+                        <TableHead>Vencimento</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Cliente/Projeto</TableHead>
+                        <TableHead className="w-28">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {groups.get(k)!.map((occ, idx) => {
+                        const exp = occ.item;
+                        const st = expenseStatusConfig[resolveStatus(occ)] ?? expenseStatusConfig.pending;
+                        const StIcon = st.icon;
+                        return (
+                          <TableRow key={`${exp.id}-${occ.occurrence_date}-${idx}`}>
+                            <TableCell className="font-medium text-foreground">
+                              <div className="flex items-center gap-2">
+                                {exp.description}
+                                {occ.virtual && (
+                                  <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px]">
+                                    <Sparkles className="mr-1 h-2.5 w-2.5" />Previsto
+                                  </Badge>
+                                )}
+                                {exp.attachment_url && (
+                                  <a href={exp.attachment_url} target="_blank" rel="noopener noreferrer">
+                                    <Paperclip className="h-3 w-3 text-muted-foreground" />
+                                  </a>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">{exp.category ?? '—'}</TableCell>
+                            <TableCell className="font-medium text-destructive">{fmt(Number(exp.amount))}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {new Date(occ.occurrence_date).toLocaleDateString('pt-BR')}
+                            </TableCell>
+                            <TableCell>
+                              {exp.recurrence === 'recurring' ? (
+                                <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                                  <RefreshCw className="mr-1 h-3 w-3" />Recorrente
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">Única</span>
                               )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">{exp.category ?? '—'}</TableCell>
-                          <TableCell className="font-medium text-destructive">{fmt(Number(exp.amount))}</TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {new Date(exp.due_date).toLocaleDateString('pt-BR')}
-                          </TableCell>
-                          <TableCell>
-                            {exp.recurrence === 'recurring' ? (
-                              <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
-                                <RefreshCw className="mr-1 h-3 w-3" />Recorrente
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={st.color}>
+                                <StIcon className="mr-1 h-3 w-3" />{st.label}
                               </Badge>
-                            ) : (
-                              <span className="text-muted-foreground text-xs">Única</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={st.color}>
-                              <StIcon className="mr-1 h-3 w-3" />{st.label}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-xs">
-                            {exp.clients?.company || exp.clients?.name || '—'}
-                            {exp.projects?.name && <div>{exp.projects.name}</div>}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              {exp.status !== 'paid' && (
-                                <Button variant="ghost" size="icon" title="Marcar como pago"
-                                  onClick={() => markExpensePaid(exp)}>
-                                  <CheckCircle className="h-4 w-4 text-emerald-500" />
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-xs">
+                              {exp.clients?.company || exp.clients?.name || '—'}
+                              {exp.projects?.name && <div>{exp.projects.name}</div>}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                {resolveStatus(occ) !== 'paid' && (
+                                  <Button variant="ghost" size="icon" title="Marcar como pago"
+                                    onClick={() => occ.virtual ? materializeExpensePaid(occ) : markExpensePaid(exp)}>
+                                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                                  </Button>
+                                )}
+                                <Button variant="ghost" size="icon" onClick={() => openEditExpense(exp)}>
+                                  <Edit className="h-4 w-4" />
                                 </Button>
-                              )}
-                              <Button variant="ghost" size="icon" onClick={() => openEditExpense(exp)}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => deleteExpense(exp.id)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  {expenses.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                        Nenhuma despesa cadastrada
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table></div>
-            </Card>
+                                {!occ.virtual && (
+                                  <Button variant="ghost" size="icon" onClick={() => deleteExpense(exp.id)}>
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table></div>
+                </Card>
+              ));
+            })()}
           </TabsContent>
+
+
 
           {/* QUOTES TAB */}
           <TabsContent value="quotes" className="space-y-4">

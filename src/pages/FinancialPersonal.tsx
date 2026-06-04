@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,8 +15,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Plus, Trash2, Edit, CheckCircle, Clock, AlertTriangle, TrendingUp, TrendingDown,
-  DollarSign, RefreshCw, Search, Paperclip
+  DollarSign, RefreshCw, Search, Paperclip, Sparkles
 } from 'lucide-react';
+import { MonthNavigator } from '@/components/financial/MonthNavigator';
+import {
+  expandOccurrencesForMonth, expandOccurrencesForMonths, monthLabel, Occurrence,
+} from '@/lib/financialMonthly';
+import { format, parseISO } from 'date-fns';
 
 interface PFIncome {
   id: string; description: string; amount: number; category: string | null;
@@ -93,9 +98,76 @@ export default function FinancialPersonal() {
   }
 
   const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  const totalIncPaid = incomes.filter(i => i.status === 'paid').reduce((a, i) => a + Number(i.amount), 0);
-  const totalExpPaid = expenses.filter(e => e.status === 'paid').reduce((a, e) => a + Number(e.amount), 0);
-  const balance = totalIncPaid - totalExpPaid;
+
+  // --- Monthly competence state ---
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const [showFuture, setShowFuture] = useState(false);
+  const monthsToShow = showFuture ? 4 : 1;
+
+  const monthIncomeOccs = useMemo(
+    () => expandOccurrencesForMonth(incomes as any[], selectedMonth),
+    [incomes, selectedMonth]
+  );
+  const monthExpenseOccs = useMemo(
+    () => expandOccurrencesForMonth(expenses as any[], selectedMonth),
+    [expenses, selectedMonth]
+  );
+  const incomeOccs = useMemo(
+    () => expandOccurrencesForMonths(incomes as any[], selectedMonth, monthsToShow),
+    [incomes, selectedMonth, monthsToShow]
+  );
+  const expenseOccs = useMemo(
+    () => expandOccurrencesForMonths(expenses as any[], selectedMonth, monthsToShow),
+    [expenses, selectedMonth, monthsToShow]
+  );
+
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const resolveStatus = (occ: Occurrence<any>) => {
+    if (occ.virtual && occ.occurrence_date < todayStr) return 'overdue';
+    return occ.status;
+  };
+
+  const monthStats = useMemo(() => {
+    let incRecebido = 0, incPrevisto = 0, expPagas = 0, expPrevistas = 0;
+    for (const o of monthIncomeOccs) {
+      const v = Number(o.item.amount) || 0;
+      if (resolveStatus(o) === 'paid') incRecebido += v;
+      else incPrevisto += v;
+    }
+    for (const o of monthExpenseOccs) {
+      const v = Number(o.item.amount) || 0;
+      if (resolveStatus(o) === 'paid') expPagas += v;
+      else expPrevistas += v;
+    }
+    return {
+      incRecebido, incPrevisto, expPagas, expPrevistas,
+      saldoReal: incRecebido - expPagas,
+      saldoPrevisto: (incRecebido + incPrevisto) - (expPagas + expPrevistas),
+    };
+  }, [monthIncomeOccs, monthExpenseOccs]);
+
+  async function materializeIncomePaid(occ: Occurrence<any>) {
+    const it = occ.item;
+    const { error } = await supabase.from('personal_income').insert({
+      description: it.description, amount: it.amount, category: it.category,
+      due_date: occ.occurrence_date, status: 'paid' as any,
+      recurrence: 'one_time' as any, parent_income_id: it.id,
+      notes: it.notes, created_by: user?.id,
+    });
+    if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
+    toast({ title: 'Receita recorrente marcada como paga!' }); loadData();
+  }
+  async function materializeExpensePaidPF(occ: Occurrence<any>) {
+    const it = occ.item;
+    const { error } = await supabase.from('expenses').insert({
+      description: it.description, amount: it.amount, category: it.category,
+      financial_type: 'pf' as any, due_date: occ.occurrence_date,
+      status: 'paid' as any, recurrence: 'one_time' as any,
+      parent_expense_id: it.id, notes: it.notes, created_by: user?.id,
+    });
+    if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
+    toast({ title: 'Despesa recorrente marcada como paga!' }); loadData();
+  }
 
   // Income CRUD
   function openNewIncome() {
@@ -181,70 +253,107 @@ export default function FinancialPersonal() {
     toast({ title: 'Despesa marcada como paga!' }); loadData();
   }
 
-  function renderTable(data: any[], type: 'income' | 'expense') {
+  function renderOccurrences(occs: Occurrence<any>[], type: 'income' | 'expense') {
     const isIncome = type === 'income';
+    const filtered = occs.filter(o =>
+      !search || o.item.description?.toLowerCase().includes(search.toLowerCase())
+    );
+    const groups = new Map<string, Occurrence<any>[]>();
+    for (const o of filtered) {
+      const arr = groups.get(o.competence) ?? [];
+      arr.push(o); groups.set(o.competence, arr);
+    }
+    const keys = Array.from(groups.keys()).sort();
+    if (keys.length === 0) {
+      return (
+        <Card className="card-premium p-10 text-center text-muted-foreground">
+          Nenhum registro em {monthLabel(selectedMonth)}.
+        </Card>
+      );
+    }
     return (
-      <div className="table-scroll"><Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Descrição</TableHead>
-            <TableHead>Categoria</TableHead>
-            <TableHead>Valor</TableHead>
-            <TableHead>Data</TableHead>
-            <TableHead>Tipo</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="w-28">Ações</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.filter(r => !search || r.description.toLowerCase().includes(search.toLowerCase())).map(r => {
-            const st = statusConfig[r.status] ?? statusConfig.pending;
-            const StIcon = st.icon;
-            return (
-              <TableRow key={r.id}>
-                <TableCell className="font-medium text-foreground">
-                  <div className="flex items-center gap-2">
-                    {r.description}
-                    {r.attachment_url && <a href={r.attachment_url} target="_blank"><Paperclip className="h-3 w-3 text-muted-foreground" /></a>}
-                  </div>
-                </TableCell>
-                <TableCell className="text-muted-foreground">{r.category ?? '—'}</TableCell>
-                <TableCell className={`font-medium ${isIncome ? 'text-emerald-400' : 'text-destructive'}`}>{fmt(Number(r.amount))}</TableCell>
-                <TableCell className="text-muted-foreground">{new Date(r.due_date).toLocaleDateString('pt-BR')}</TableCell>
-                <TableCell>
-                  {r.recurrence === 'recurring' ? (
-                    <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
-                      <RefreshCw className="mr-1 h-3 w-3" />Recorrente
-                    </Badge>
-                  ) : <span className="text-muted-foreground text-xs">Única</span>}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className={st.color}><StIcon className="mr-1 h-3 w-3" />{st.label}</Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    {r.status !== 'paid' && (
-                      <Button variant="ghost" size="icon" title="Marcar como pago"
-                        onClick={() => isIncome ? markIncomePaid(r.id) : markExpensePaid(r.id)}>
-                        <CheckCircle className="h-4 w-4 text-emerald-500" />
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="icon" onClick={() => isIncome ? openEditIncome(r) : openEditExpense(r)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => isIncome ? deleteIncome(r.id) : deleteExpense(r.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-          {data.length === 0 && (
-            <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum registro</TableCell></TableRow>
-          )}
-        </TableBody>
-      </Table></div>
+      <div className="space-y-4">
+        {keys.map(k => (
+          <Card key={k} className="card-premium overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
+              <h3 className="font-semibold text-foreground">{monthLabel(parseISO(k + '-01'))}</h3>
+              <span className="text-xs text-muted-foreground">{groups.get(k)!.length} lançamento(s)</span>
+            </div>
+            <div className="table-scroll"><Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Descrição</TableHead>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-28">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {groups.get(k)!.map((occ, idx) => {
+                  const r = occ.item;
+                  const st = statusConfig[resolveStatus(occ)] ?? statusConfig.pending;
+                  const StIcon = st.icon;
+                  return (
+                    <TableRow key={`${r.id}-${occ.occurrence_date}-${idx}`}>
+                      <TableCell className="font-medium text-foreground">
+                        <div className="flex items-center gap-2">
+                          {r.description}
+                          {occ.virtual && (
+                            <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px]">
+                              <Sparkles className="mr-1 h-2.5 w-2.5" />Previsto
+                            </Badge>
+                          )}
+                          {r.attachment_url && <a href={r.attachment_url} target="_blank"><Paperclip className="h-3 w-3 text-muted-foreground" /></a>}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{r.category ?? '—'}</TableCell>
+                      <TableCell className={`font-medium ${isIncome ? 'text-emerald-400' : 'text-destructive'}`}>{fmt(Number(r.amount))}</TableCell>
+                      <TableCell className="text-muted-foreground">{new Date(occ.occurrence_date).toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell>
+                        {r.recurrence === 'recurring' ? (
+                          <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                            <RefreshCw className="mr-1 h-3 w-3" />Recorrente
+                          </Badge>
+                        ) : <span className="text-muted-foreground text-xs">Única</span>}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={st.color}><StIcon className="mr-1 h-3 w-3" />{st.label}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          {resolveStatus(occ) !== 'paid' && (
+                            <Button variant="ghost" size="icon" title="Marcar como pago"
+                              onClick={() => {
+                                if (occ.virtual) {
+                                  isIncome ? materializeIncomePaid(occ) : materializeExpensePaidPF(occ);
+                                } else {
+                                  isIncome ? markIncomePaid(r.id) : markExpensePaid(r.id);
+                                }
+                              }}>
+                              <CheckCircle className="h-4 w-4 text-emerald-500" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" onClick={() => isIncome ? openEditIncome(r) : openEditExpense(r)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          {!occ.virtual && (
+                            <Button variant="ghost" size="icon" onClick={() => isIncome ? deleteIncome(r.id) : deleteExpense(r.id)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table></div>
+          </Card>
+        ))}
+      </div>
     );
   }
 
@@ -253,30 +362,60 @@ export default function FinancialPersonal() {
       <div className="animate-fade-in space-y-6">
         <div>
           <h1 className="page-title">Financeiro PF</h1>
-          <p className="text-muted-foreground">Receitas e despesas pessoais</p>
+          <p className="text-muted-foreground">Receitas e despesas pessoais — gestão por competência mensal</p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card className="border-border bg-card">
+        <MonthNavigator
+          value={selectedMonth}
+          onChange={setSelectedMonth}
+          showFuture={showFuture}
+          onShowFutureChange={setShowFuture}
+        />
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="card-premium">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Receitas PF</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Receitas recebidas</CardTitle>
               <TrendingUp className="h-5 w-5 text-emerald-400" />
             </CardHeader>
-            <CardContent><div className="text-2xl font-bold text-emerald-400">{fmt(totalIncPaid)}</div></CardContent>
+            <CardContent>
+              <div className="text-2xl font-bold text-emerald-400">{fmt(monthStats.incRecebido)}</div>
+              <p className="text-xs text-muted-foreground mt-1">+{fmt(monthStats.incPrevisto)} previsto</p>
+            </CardContent>
           </Card>
-          <Card className="border-border bg-card">
+          <Card className="card-premium">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Despesas PF</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Despesas pagas</CardTitle>
               <TrendingDown className="h-5 w-5 text-destructive" />
             </CardHeader>
-            <CardContent><div className="text-2xl font-bold text-destructive">{fmt(totalExpPaid)}</div></CardContent>
+            <CardContent>
+              <div className="text-2xl font-bold text-destructive">{fmt(monthStats.expPagas)}</div>
+              <p className="text-xs text-muted-foreground mt-1">+{fmt(monthStats.expPrevistas)} previsto</p>
+            </CardContent>
           </Card>
-          <Card className="border-border bg-card">
+          <Card className="card-premium">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Saldo PF</CardTitle>
-              <DollarSign className={`h-5 w-5 ${balance >= 0 ? 'text-emerald-400' : 'text-destructive'}`} />
+              <CardTitle className="text-sm font-medium text-muted-foreground">Saldo real</CardTitle>
+              <DollarSign className={`h-5 w-5 ${monthStats.saldoReal >= 0 ? 'text-emerald-400' : 'text-destructive'}`} />
             </CardHeader>
-            <CardContent><div className={`text-2xl font-bold ${balance >= 0 ? 'text-emerald-400' : 'text-destructive'}`}>{fmt(balance)}</div></CardContent>
+            <CardContent>
+              <div className={`text-2xl font-bold ${monthStats.saldoReal >= 0 ? 'text-emerald-400' : 'text-destructive'}`}>
+                {fmt(monthStats.saldoReal)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Já realizado no mês</p>
+            </CardContent>
+          </Card>
+          <Card className="card-premium">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Saldo previsto</CardTitle>
+              <DollarSign className={`h-5 w-5 ${monthStats.saldoPrevisto >= 0 ? 'text-emerald-400' : 'text-destructive'}`} />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${monthStats.saldoPrevisto >= 0 ? 'text-emerald-400' : 'text-destructive'}`}>
+                {fmt(monthStats.saldoPrevisto)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Considerando pendentes</p>
+            </CardContent>
           </Card>
         </div>
 
@@ -297,14 +436,14 @@ export default function FinancialPersonal() {
             <div className="flex justify-end">
               <Button onClick={openNewIncome}><Plus className="mr-2 h-4 w-4" /> Nova Receita</Button>
             </div>
-            <Card className="border-border bg-card">{renderTable(incomes, 'income')}</Card>
+            {renderOccurrences(incomeOccs, 'income')}
           </TabsContent>
 
           <TabsContent value="expenses" className="space-y-4">
             <div className="flex justify-end">
               <Button onClick={openNewExpense}><Plus className="mr-2 h-4 w-4" /> Nova Despesa</Button>
             </div>
-            <Card className="border-border bg-card">{renderTable(expenses, 'expense')}</Card>
+            {renderOccurrences(expenseOccs, 'expense')}
           </TabsContent>
         </Tabs>
       </div>
