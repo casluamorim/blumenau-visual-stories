@@ -101,69 +101,55 @@ export default function CashFlow() {
     return { rangeStart: parseISO(customStart), rangeEnd: parseISO(customEnd) };
   }, [range, customStart, customEnd]);
 
-  // Generate recurrence projections within window
-  function expandRecurrences<T extends { recurrence: string; recurrence_day: number | null; recurrence_end: string | null; is_recurring_active: boolean; due_date: string; amount: number; status: string }>(
+  // Use shared monthly engine to expand recurrences and skip already-materialized children
+  function buildMovements<T extends { id: string; due_date: string; amount: number; status: string; recurrence: string; recurrence_day: number | null; recurrence_end: string | null; is_recurring_active: boolean; parent_invoice_id?: string | null; parent_expense_id?: string | null; parent_income_id?: string | null }>(
     items: T[],
-    horizonEnd: Date,
-    builder: (it: T, dueDate: Date, isProjection: boolean) => Movement
+    builder: (it: T, dateISO: string, isProjection: boolean, status: string) => Movement
   ): Movement[] {
-    const out: Movement[] = [];
-    items.forEach(it => {
-      // Always include the actual record
-      out.push(builder(it, parseISO(it.due_date), false));
-      if (it.recurrence === 'recurring' && it.is_recurring_active) {
-        const end = it.recurrence_end ? parseISO(it.recurrence_end) : horizonEnd;
-        let next = addMonths(parseISO(it.due_date), 1);
-        const stop = isBefore(end, horizonEnd) ? end : horizonEnd;
-        while (!isAfter(next, stop)) {
-          out.push(builder(it, next, true));
-          next = addMonths(next, 1);
-        }
-      }
-    });
-    return out;
+    const occs = expandOccurrencesInRange(items as any, rangeStart, rangeEnd);
+    return occs.map(o => builder(o.item as T, o.occurrence_date, o.virtual, o.status));
   }
 
   const movements = useMemo<Movement[]>(() => {
     const list: Movement[] = [];
 
     // Invoices (entradas)
-    list.push(...expandRecurrences(invoices as any, rangeEnd, (it: any, due, isProj) => ({
-      date: format(due, 'yyyy-MM-dd'),
+    list.push(...buildMovements(invoices as any, (it: any, dateISO, isProj, status) => ({
+      date: dateISO,
       type: 'in',
       amount: Number(it.amount) || 0,
       label: it.title + (it.clients?.company ? ` — ${it.clients.company}` : it.clients?.name ? ` — ${it.clients.name}` : ''),
       category: 'Fatura',
-      status: it.status,
+      status,
       financial_type: it.financial_type,
       source: 'invoice',
-      realized: !isProj && it.status === 'paid',
+      realized: !isProj && status === 'paid',
     })));
 
     // Expenses (saídas)
-    list.push(...expandRecurrences(expenses as any, rangeEnd, (it: any, due, isProj) => ({
-      date: format(due, 'yyyy-MM-dd'),
+    list.push(...buildMovements(expenses as any, (it: any, dateISO, isProj, status) => ({
+      date: dateISO,
       type: 'out',
       amount: Number(it.amount) || 0,
       label: it.description + (it.category ? ` (${it.category})` : ''),
       category: it.category || 'Despesa',
-      status: it.status,
+      status,
       financial_type: it.financial_type,
       source: 'expense',
-      realized: !isProj && it.status === 'paid',
+      realized: !isProj && status === 'paid',
     })));
 
     // Personal income
-    list.push(...expandRecurrences(personalIncome as any, rangeEnd, (it: any, due, isProj) => ({
-      date: format(due, 'yyyy-MM-dd'),
+    list.push(...buildMovements(personalIncome as any, (it: any, dateISO, isProj, status) => ({
+      date: dateISO,
       type: 'in',
       amount: Number(it.amount) || 0,
       label: it.description + (it.category ? ` (${it.category})` : ''),
       category: it.category || 'Receita PF',
-      status: it.status,
+      status,
       financial_type: 'pf',
       source: 'personal_income',
-      realized: !isProj && it.status === 'paid',
+      realized: !isProj && status === 'paid',
     })));
 
     // Simulations
@@ -173,7 +159,7 @@ export default function CashFlow() {
     return list.filter(m =>
       finType === 'all' || m.financial_type === finType
     );
-  }, [invoices, expenses, personalIncome, simulations, finType, rangeEnd]);
+  }, [invoices, expenses, personalIncome, simulations, finType, rangeStart, rangeEnd]);
 
   // Build chart series day-by-day across window
   const chartData = useMemo(() => {
