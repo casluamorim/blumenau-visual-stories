@@ -19,11 +19,13 @@ import {
   TrendingUp, TrendingDown, Wallet, AlertTriangle, ArrowUpRight, ArrowDownRight,
   Calendar, Plus, Sparkles
 } from 'lucide-react';
-import { format, addDays, startOfDay, endOfDay, parseISO, isBefore, isAfter, addMonths, isSameDay, differenceInDays } from 'date-fns';
+import { format, addDays, startOfDay, endOfDay, parseISO, isBefore, isAfter, addMonths, isSameDay, differenceInDays, startOfWeek, startOfMonth, startOfYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { expandOccurrencesInRange } from '@/lib/financialMonthly';
 
 type FinType = 'all' | 'pj' | 'pf';
 type RangeKey = 'today' | '7d' | '30d' | '90d' | '12m' | 'custom';
+type GroupBy = 'day' | 'week' | 'month' | 'year';
 
 interface Movement {
   date: string; // ISO date yyyy-mm-dd
@@ -49,6 +51,7 @@ export default function CashFlow() {
   const [loading, setLoading] = useState(true);
   const [finType, setFinType] = useState<FinType>('all');
   const [range, setRange] = useState<RangeKey>('30d');
+  const [groupBy, setGroupBy] = useState<GroupBy>('day');
   const [customStart, setCustomStart] = useState(format(addDays(new Date(), -30), 'yyyy-MM-dd'));
   const [customEnd, setCustomEnd] = useState(format(addDays(new Date(), 30), 'yyyy-MM-dd'));
 
@@ -98,69 +101,55 @@ export default function CashFlow() {
     return { rangeStart: parseISO(customStart), rangeEnd: parseISO(customEnd) };
   }, [range, customStart, customEnd]);
 
-  // Generate recurrence projections within window
-  function expandRecurrences<T extends { recurrence: string; recurrence_day: number | null; recurrence_end: string | null; is_recurring_active: boolean; due_date: string; amount: number; status: string }>(
+  // Use shared monthly engine to expand recurrences and skip already-materialized children
+  function buildMovements<T extends { id: string; due_date: string; amount: number; status: string; recurrence: string; recurrence_day: number | null; recurrence_end: string | null; is_recurring_active: boolean; parent_invoice_id?: string | null; parent_expense_id?: string | null; parent_income_id?: string | null }>(
     items: T[],
-    horizonEnd: Date,
-    builder: (it: T, dueDate: Date, isProjection: boolean) => Movement
+    builder: (it: T, dateISO: string, isProjection: boolean, status: string) => Movement
   ): Movement[] {
-    const out: Movement[] = [];
-    items.forEach(it => {
-      // Always include the actual record
-      out.push(builder(it, parseISO(it.due_date), false));
-      if (it.recurrence === 'recurring' && it.is_recurring_active) {
-        const end = it.recurrence_end ? parseISO(it.recurrence_end) : horizonEnd;
-        let next = addMonths(parseISO(it.due_date), 1);
-        const stop = isBefore(end, horizonEnd) ? end : horizonEnd;
-        while (!isAfter(next, stop)) {
-          out.push(builder(it, next, true));
-          next = addMonths(next, 1);
-        }
-      }
-    });
-    return out;
+    const occs = expandOccurrencesInRange(items as any, rangeStart, rangeEnd);
+    return occs.map(o => builder(o.item as T, o.occurrence_date, o.virtual, o.status));
   }
 
   const movements = useMemo<Movement[]>(() => {
     const list: Movement[] = [];
 
     // Invoices (entradas)
-    list.push(...expandRecurrences(invoices as any, rangeEnd, (it: any, due, isProj) => ({
-      date: format(due, 'yyyy-MM-dd'),
+    list.push(...buildMovements(invoices as any, (it: any, dateISO, isProj, status) => ({
+      date: dateISO,
       type: 'in',
       amount: Number(it.amount) || 0,
       label: it.title + (it.clients?.company ? ` — ${it.clients.company}` : it.clients?.name ? ` — ${it.clients.name}` : ''),
       category: 'Fatura',
-      status: it.status,
+      status,
       financial_type: it.financial_type,
       source: 'invoice',
-      realized: !isProj && it.status === 'paid',
+      realized: !isProj && status === 'paid',
     })));
 
     // Expenses (saídas)
-    list.push(...expandRecurrences(expenses as any, rangeEnd, (it: any, due, isProj) => ({
-      date: format(due, 'yyyy-MM-dd'),
+    list.push(...buildMovements(expenses as any, (it: any, dateISO, isProj, status) => ({
+      date: dateISO,
       type: 'out',
       amount: Number(it.amount) || 0,
       label: it.description + (it.category ? ` (${it.category})` : ''),
       category: it.category || 'Despesa',
-      status: it.status,
+      status,
       financial_type: it.financial_type,
       source: 'expense',
-      realized: !isProj && it.status === 'paid',
+      realized: !isProj && status === 'paid',
     })));
 
     // Personal income
-    list.push(...expandRecurrences(personalIncome as any, rangeEnd, (it: any, due, isProj) => ({
-      date: format(due, 'yyyy-MM-dd'),
+    list.push(...buildMovements(personalIncome as any, (it: any, dateISO, isProj, status) => ({
+      date: dateISO,
       type: 'in',
       amount: Number(it.amount) || 0,
       label: it.description + (it.category ? ` (${it.category})` : ''),
       category: it.category || 'Receita PF',
-      status: it.status,
+      status,
       financial_type: 'pf',
       source: 'personal_income',
-      realized: !isProj && it.status === 'paid',
+      realized: !isProj && status === 'paid',
     })));
 
     // Simulations
@@ -170,7 +159,7 @@ export default function CashFlow() {
     return list.filter(m =>
       finType === 'all' || m.financial_type === finType
     );
-  }, [invoices, expenses, personalIncome, simulations, finType, rangeEnd]);
+  }, [invoices, expenses, personalIncome, simulations, finType, rangeStart, rangeEnd]);
 
   // Build chart series day-by-day across window
   const chartData = useMemo(() => {
@@ -215,6 +204,43 @@ export default function CashFlow() {
     }
     return data;
   }, [movements, rangeStart, rangeEnd]);
+
+  // Aggregate the daily chartData into the chosen grouping (week/month/year)
+  const groupedChartData = useMemo(() => {
+    if (groupBy === 'day') return chartData;
+    const buckets = new Map<string, { date: string; label: string; entradas: number; saidas: number; saldo: number | null; saldoProjetado: number; lastDate: Date }>();
+    for (const d of chartData) {
+      const day = parseISO(d.date);
+      let bucketStart: Date;
+      let label: string;
+      if (groupBy === 'week') {
+        bucketStart = startOfWeek(day, { weekStartsOn: 1 });
+        label = `Sem ${format(bucketStart, 'dd/MM', { locale: ptBR })}`;
+      } else if (groupBy === 'month') {
+        bucketStart = startOfMonth(day);
+        label = format(bucketStart, "MMM/yy", { locale: ptBR });
+      } else {
+        bucketStart = startOfYear(day);
+        label = format(bucketStart, 'yyyy');
+      }
+      const key = format(bucketStart, 'yyyy-MM-dd');
+      const b = buckets.get(key) ?? {
+        date: key, label, entradas: 0, saidas: 0,
+        saldo: null as number | null, saldoProjetado: 0, lastDate: day,
+      };
+      b.entradas += d.entradas || 0;
+      b.saidas += d.saidas || 0;
+      // saldo and saldoProjetado are running totals — keep the latest sample within the bucket
+      if (!isBefore(day, b.lastDate)) {
+        b.saldo = d.saldo;
+        b.saldoProjetado = d.saldoProjetado;
+        b.lastDate = day;
+      }
+      buckets.set(key, b);
+    }
+    return Array.from(buckets.values()).sort((a, b) => a.date.localeCompare(b.date));
+  }, [chartData, groupBy]);
+
 
   // Cards
   const totals = useMemo(() => {
@@ -317,6 +343,14 @@ export default function CashFlow() {
                 <TabsTrigger value="all">Ambos</TabsTrigger>
                 <TabsTrigger value="pj">PJ</TabsTrigger>
                 <TabsTrigger value="pf">PF</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Tabs value={groupBy} onValueChange={(v) => setGroupBy(v as GroupBy)}>
+              <TabsList>
+                <TabsTrigger value="day">Dia</TabsTrigger>
+                <TabsTrigger value="week">Semana</TabsTrigger>
+                <TabsTrigger value="month">Mês</TabsTrigger>
+                <TabsTrigger value="year">Ano</TabsTrigger>
               </TabsList>
             </Tabs>
             <Select value={range} onValueChange={(v) => setRange(v as RangeKey)}>
@@ -468,7 +502,7 @@ export default function CashFlow() {
               <div className="h-[360px] flex items-center justify-center text-muted-foreground">Carregando...</div>
             ) : (
               <ResponsiveContainer width="100%" height={360}>
-                <ComposedChart data={chartData}>
+                <ComposedChart data={groupedChartData}>
                   <defs>
                     <linearGradient id="entradas" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="hsl(142 76% 45%)" stopOpacity={0.6} />
@@ -524,22 +558,89 @@ export default function CashFlow() {
                       </TableCell>
                     </TableRow>
                   )}
-                  {tableMovements.map((m, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="whitespace-nowrap">{format(parseISO(m.date), 'dd/MM/yy', { locale: ptBR })}</TableCell>
-                      <TableCell className="max-w-[280px] truncate">{m.label}</TableCell>
-                      <TableCell><Badge variant="outline">{m.category}</Badge></TableCell>
-                      <TableCell><Badge variant="secondary">{m.financial_type.toUpperCase()}</Badge></TableCell>
-                      <TableCell>
-                        <Badge variant={m.realized ? 'default' : 'outline'}>
-                          {m.realized ? 'Realizado' : 'Previsto'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className={`text-right font-medium ${m.type === 'in' ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {m.type === 'in' ? '+' : '-'}{formatBRL(m.amount)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {(() => {
+                    if (groupBy === 'day') {
+                      return tableMovements.map((m, i) => (
+                        <TableRow key={i}>
+                          <TableCell className="whitespace-nowrap">{format(parseISO(m.date), 'dd/MM/yy', { locale: ptBR })}</TableCell>
+                          <TableCell className="max-w-[280px] truncate">{m.label}</TableCell>
+                          <TableCell><Badge variant="outline">{m.category}</Badge></TableCell>
+                          <TableCell><Badge variant="secondary">{m.financial_type.toUpperCase()}</Badge></TableCell>
+                          <TableCell>
+                            <Badge variant={m.realized ? 'default' : 'outline'}>
+                              {m.realized ? 'Realizado' : 'Previsto'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className={`text-right font-medium ${m.type === 'in' ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {m.type === 'in' ? '+' : '-'}{formatBRL(m.amount)}
+                          </TableCell>
+                        </TableRow>
+                      ));
+                    }
+                    // Group movements by week/month/year
+                    const groups = new Map<string, { label: string; items: typeof tableMovements }>();
+                    for (const m of tableMovements) {
+                      const day = parseISO(m.date);
+                      let bucket: Date;
+                      let label: string;
+                      if (groupBy === 'week') {
+                        bucket = startOfWeek(day, { weekStartsOn: 1 });
+                        label = `Semana de ${format(bucket, "dd 'de' MMM yyyy", { locale: ptBR })}`;
+                      } else if (groupBy === 'month') {
+                        bucket = startOfMonth(day);
+                        const s = format(bucket, "MMMM 'de' yyyy", { locale: ptBR });
+                        label = s.charAt(0).toUpperCase() + s.slice(1);
+                      } else {
+                        bucket = startOfYear(day);
+                        label = format(bucket, 'yyyy');
+                      }
+                      const key = format(bucket, 'yyyy-MM-dd');
+                      const g = groups.get(key) ?? { label, items: [] };
+                      g.items.push(m);
+                      groups.set(key, g);
+                    }
+                    const sorted = Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+                    const rows: JSX.Element[] = [];
+                    for (const [key, g] of sorted) {
+                      const totalIn = g.items.filter(x => x.type === 'in').reduce((a, x) => a + x.amount, 0);
+                      const totalOut = g.items.filter(x => x.type === 'out').reduce((a, x) => a + x.amount, 0);
+                      rows.push(
+                        <TableRow key={`h-${key}`} className="bg-muted/40 hover:bg-muted/40">
+                          <TableCell colSpan={4} className="font-semibold text-foreground">
+                            {g.label}
+                            <span className="ml-2 text-xs font-normal text-muted-foreground">
+                              ({g.items.length} mov.)
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right text-xs text-muted-foreground">Subtotal</TableCell>
+                          <TableCell className="text-right font-semibold">
+                            <span className="text-emerald-500">+{formatBRL(totalIn)}</span>
+                            <span className="mx-1 text-muted-foreground">/</span>
+                            <span className="text-red-500">-{formatBRL(totalOut)}</span>
+                          </TableCell>
+                        </TableRow>
+                      );
+                      for (const m of g.items) {
+                        rows.push(
+                          <TableRow key={`${key}-${m.date}-${m.label}-${rows.length}`}>
+                            <TableCell className="whitespace-nowrap pl-6">{format(parseISO(m.date), 'dd/MM/yy', { locale: ptBR })}</TableCell>
+                            <TableCell className="max-w-[280px] truncate">{m.label}</TableCell>
+                            <TableCell><Badge variant="outline">{m.category}</Badge></TableCell>
+                            <TableCell><Badge variant="secondary">{m.financial_type.toUpperCase()}</Badge></TableCell>
+                            <TableCell>
+                              <Badge variant={m.realized ? 'default' : 'outline'}>
+                                {m.realized ? 'Realizado' : 'Previsto'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className={`text-right font-medium ${m.type === 'in' ? 'text-emerald-500' : 'text-red-500'}`}>
+                              {m.type === 'in' ? '+' : '-'}{formatBRL(m.amount)}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      }
+                    }
+                    return rows;
+                  })()}
                 </TableBody>
               </Table>
             </div>

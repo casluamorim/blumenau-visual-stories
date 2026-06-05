@@ -16,12 +16,18 @@ interface Props {
 export function MonthNavigator({ value, onChange, showFuture, onShowFutureChange }: Props) {
   const options = listMonthsAround(new Date(), 18, 12);
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border/60 bg-card/60 px-3 py-2 backdrop-blur-sm">
-      <Button variant="ghost" size="icon" onClick={() => onChange(addMonths(value, -1))} aria-label="Mês anterior">
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onChange(addMonths(value, -1))}
+        aria-label="Mês anterior"
+        className="text-foreground hover:bg-muted"
+      >
         <ChevronLeft className="h-4 w-4" />
       </Button>
       <Select value={monthKey(value)} onValueChange={(v) => onChange(parseMonthKey(v))}>
-        <SelectTrigger className="w-[200px] border-border bg-background/50 font-medium">
+        <SelectTrigger className="w-[200px] border-border bg-background text-foreground font-medium">
           <SelectValue />
         </SelectTrigger>
         <SelectContent className="max-h-80">
@@ -32,15 +38,26 @@ export function MonthNavigator({ value, onChange, showFuture, onShowFutureChange
           ))}
         </SelectContent>
       </Select>
-      <Button variant="ghost" size="icon" onClick={() => onChange(addMonths(value, 1))} aria-label="Próximo mês">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onChange(addMonths(value, 1))}
+        aria-label="Próximo mês"
+        className="text-foreground hover:bg-muted"
+      >
         <ChevronRight className="h-4 w-4" />
       </Button>
-      <Button variant="outline" size="sm" onClick={() => onChange(new Date())} className="ml-1">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onChange(new Date())}
+        className="ml-1 border-border bg-background text-foreground hover:bg-muted"
+      >
         Hoje
       </Button>
       <div className="ml-auto flex items-center gap-2">
         <Switch id="show-future" checked={showFuture} onCheckedChange={onShowFutureChange} />
-        <Label htmlFor="show-future" className="text-xs text-muted-foreground cursor-pointer">
+        <Label htmlFor="show-future" className="cursor-pointer text-xs text-muted-foreground">
           Mostrar lançamentos futuros
         </Label>
       </div>
