@@ -50,6 +50,7 @@ export default function CashFlow() {
   const [loading, setLoading] = useState(true);
   const [finType, setFinType] = useState<FinType>('all');
   const [range, setRange] = useState<RangeKey>('30d');
+  const [groupBy, setGroupBy] = useState<GroupBy>('day');
   const [customStart, setCustomStart] = useState(format(addDays(new Date(), -30), 'yyyy-MM-dd'));
   const [customEnd, setCustomEnd] = useState(format(addDays(new Date(), 30), 'yyyy-MM-dd'));
 
