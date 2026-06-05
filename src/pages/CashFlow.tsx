@@ -358,6 +358,14 @@ export default function CashFlow() {
                 <TabsTrigger value="pf">PF</TabsTrigger>
               </TabsList>
             </Tabs>
+            <Tabs value={groupBy} onValueChange={(v) => setGroupBy(v as GroupBy)}>
+              <TabsList>
+                <TabsTrigger value="day">Dia</TabsTrigger>
+                <TabsTrigger value="week">Semana</TabsTrigger>
+                <TabsTrigger value="month">Mês</TabsTrigger>
+                <TabsTrigger value="year">Ano</TabsTrigger>
+              </TabsList>
+            </Tabs>
             <Select value={range} onValueChange={(v) => setRange(v as RangeKey)}>
               <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
               <SelectContent>
