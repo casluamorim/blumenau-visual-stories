@@ -19,7 +19,7 @@ import {
   TrendingUp, TrendingDown, Wallet, AlertTriangle, ArrowUpRight, ArrowDownRight,
   Calendar, Plus, Sparkles
 } from 'lucide-react';
-import { format, addDays, startOfDay, endOfDay, parseISO, isBefore, isAfter, addMonths, isSameDay, differenceInDays } from 'date-fns';
+import { format, addDays, startOfDay, endOfDay, parseISO, isBefore, isAfter, addMonths, isSameDay, differenceInDays, startOfWeek, startOfMonth, startOfYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 type FinType = 'all' | 'pj' | 'pf';
