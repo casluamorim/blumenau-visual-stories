@@ -507,7 +507,7 @@ export default function CashFlow() {
               <div className="h-[360px] flex items-center justify-center text-muted-foreground">Carregando...</div>
             ) : (
               <ResponsiveContainer width="100%" height={360}>
-                <ComposedChart data={chartData}>
+                <ComposedChart data={groupedChartData}>
                   <defs>
                     <linearGradient id="entradas" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="hsl(142 76% 45%)" stopOpacity={0.6} />
