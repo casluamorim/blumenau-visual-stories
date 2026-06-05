@@ -571,22 +571,89 @@ export default function CashFlow() {
                       </TableCell>
                     </TableRow>
                   )}
-                  {tableMovements.map((m, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="whitespace-nowrap">{format(parseISO(m.date), 'dd/MM/yy', { locale: ptBR })}</TableCell>
-                      <TableCell className="max-w-[280px] truncate">{m.label}</TableCell>
-                      <TableCell><Badge variant="outline">{m.category}</Badge></TableCell>
-                      <TableCell><Badge variant="secondary">{m.financial_type.toUpperCase()}</Badge></TableCell>
-                      <TableCell>
-                        <Badge variant={m.realized ? 'default' : 'outline'}>
-                          {m.realized ? 'Realizado' : 'Previsto'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className={`text-right font-medium ${m.type === 'in' ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {m.type === 'in' ? '+' : '-'}{formatBRL(m.amount)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {(() => {
+                    if (groupBy === 'day') {
+                      return tableMovements.map((m, i) => (
+                        <TableRow key={i}>
+                          <TableCell className="whitespace-nowrap">{format(parseISO(m.date), 'dd/MM/yy', { locale: ptBR })}</TableCell>
+                          <TableCell className="max-w-[280px] truncate">{m.label}</TableCell>
+                          <TableCell><Badge variant="outline">{m.category}</Badge></TableCell>
+                          <TableCell><Badge variant="secondary">{m.financial_type.toUpperCase()}</Badge></TableCell>
+                          <TableCell>
+                            <Badge variant={m.realized ? 'default' : 'outline'}>
+                              {m.realized ? 'Realizado' : 'Previsto'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className={`text-right font-medium ${m.type === 'in' ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {m.type === 'in' ? '+' : '-'}{formatBRL(m.amount)}
+                          </TableCell>
+                        </TableRow>
+                      ));
+                    }
+                    // Group movements by week/month/year
+                    const groups = new Map<string, { label: string; items: typeof tableMovements }>();
+                    for (const m of tableMovements) {
+                      const day = parseISO(m.date);
+                      let bucket: Date;
+                      let label: string;
+                      if (groupBy === 'week') {
+                        bucket = startOfWeek(day, { weekStartsOn: 1 });
+                        label = `Semana de ${format(bucket, "dd 'de' MMM yyyy", { locale: ptBR })}`;
+                      } else if (groupBy === 'month') {
+                        bucket = startOfMonth(day);
+                        const s = format(bucket, "MMMM 'de' yyyy", { locale: ptBR });
+                        label = s.charAt(0).toUpperCase() + s.slice(1);
+                      } else {
+                        bucket = startOfYear(day);
+                        label = format(bucket, 'yyyy');
+                      }
+                      const key = format(bucket, 'yyyy-MM-dd');
+                      const g = groups.get(key) ?? { label, items: [] };
+                      g.items.push(m);
+                      groups.set(key, g);
+                    }
+                    const sorted = Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+                    const rows: JSX.Element[] = [];
+                    for (const [key, g] of sorted) {
+                      const totalIn = g.items.filter(x => x.type === 'in').reduce((a, x) => a + x.amount, 0);
+                      const totalOut = g.items.filter(x => x.type === 'out').reduce((a, x) => a + x.amount, 0);
+                      rows.push(
+                        <TableRow key={`h-${key}`} className="bg-muted/40 hover:bg-muted/40">
+                          <TableCell colSpan={4} className="font-semibold text-foreground">
+                            {g.label}
+                            <span className="ml-2 text-xs font-normal text-muted-foreground">
+                              ({g.items.length} mov.)
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right text-xs text-muted-foreground">Subtotal</TableCell>
+                          <TableCell className="text-right font-semibold">
+                            <span className="text-emerald-500">+{formatBRL(totalIn)}</span>
+                            <span className="mx-1 text-muted-foreground">/</span>
+                            <span className="text-red-500">-{formatBRL(totalOut)}</span>
+                          </TableCell>
+                        </TableRow>
+                      );
+                      for (const m of g.items) {
+                        rows.push(
+                          <TableRow key={`${key}-${m.date}-${m.label}-${rows.length}`}>
+                            <TableCell className="whitespace-nowrap pl-6">{format(parseISO(m.date), 'dd/MM/yy', { locale: ptBR })}</TableCell>
+                            <TableCell className="max-w-[280px] truncate">{m.label}</TableCell>
+                            <TableCell><Badge variant="outline">{m.category}</Badge></TableCell>
+                            <TableCell><Badge variant="secondary">{m.financial_type.toUpperCase()}</Badge></TableCell>
+                            <TableCell>
+                              <Badge variant={m.realized ? 'default' : 'outline'}>
+                                {m.realized ? 'Realizado' : 'Previsto'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className={`text-right font-medium ${m.type === 'in' ? 'text-emerald-500' : 'text-red-500'}`}>
+                              {m.type === 'in' ? '+' : '-'}{formatBRL(m.amount)}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      }
+                    }
+                    return rows;
+                  })()}
                 </TableBody>
               </Table>
             </div>
