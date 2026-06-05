@@ -24,6 +24,7 @@ import { ptBR } from 'date-fns/locale';
 
 type FinType = 'all' | 'pj' | 'pf';
 type RangeKey = 'today' | '7d' | '30d' | '90d' | '12m' | 'custom';
+type GroupBy = 'day' | 'week' | 'month' | 'year';
 
 interface Movement {
   date: string; // ISO date yyyy-mm-dd
