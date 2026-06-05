@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { format, addDays, startOfDay, endOfDay, parseISO, isBefore, isAfter, addMonths, isSameDay, differenceInDays, startOfWeek, startOfMonth, startOfYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { expandOccurrencesInRange } from '@/lib/financialMonthly';
 
 type FinType = 'all' | 'pj' | 'pf';
 type RangeKey = 'today' | '7d' | '30d' | '90d' | '12m' | 'custom';
