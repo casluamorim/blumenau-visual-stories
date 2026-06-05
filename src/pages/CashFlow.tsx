@@ -218,6 +218,43 @@ export default function CashFlow() {
     return data;
   }, [movements, rangeStart, rangeEnd]);
 
+  // Aggregate the daily chartData into the chosen grouping (week/month/year)
+  const groupedChartData = useMemo(() => {
+    if (groupBy === 'day') return chartData;
+    const buckets = new Map<string, { date: string; label: string; entradas: number; saidas: number; saldo: number | null; saldoProjetado: number; lastDate: Date }>();
+    for (const d of chartData) {
+      const day = parseISO(d.date);
+      let bucketStart: Date;
+      let label: string;
+      if (groupBy === 'week') {
+        bucketStart = startOfWeek(day, { weekStartsOn: 1 });
+        label = `Sem ${format(bucketStart, 'dd/MM', { locale: ptBR })}`;
+      } else if (groupBy === 'month') {
+        bucketStart = startOfMonth(day);
+        label = format(bucketStart, "MMM/yy", { locale: ptBR });
+      } else {
+        bucketStart = startOfYear(day);
+        label = format(bucketStart, 'yyyy');
+      }
+      const key = format(bucketStart, 'yyyy-MM-dd');
+      const b = buckets.get(key) ?? {
+        date: key, label, entradas: 0, saidas: 0,
+        saldo: null as number | null, saldoProjetado: 0, lastDate: day,
+      };
+      b.entradas += d.entradas || 0;
+      b.saidas += d.saidas || 0;
+      // saldo and saldoProjetado are running totals — keep the latest sample within the bucket
+      if (!isBefore(day, b.lastDate)) {
+        b.saldo = d.saldo;
+        b.saldoProjetado = d.saldoProjetado;
+        b.lastDate = day;
+      }
+      buckets.set(key, b);
+    }
+    return Array.from(buckets.values()).sort((a, b) => a.date.localeCompare(b.date));
+  }, [chartData, groupBy]);
+
+
   // Cards
   const totals = useMemo(() => {
     let entradas = 0, saidas = 0, entradasProj = 0, saidasProj = 0;
