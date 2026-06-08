@@ -296,8 +296,9 @@ export default function Dashboard() {
   async function loadFeed() {
     // Build a human "agency feed" by combining recent meaningful events
     const since = subDays(new Date(), 14).toISOString();
-    const [paidInv, approvedContents, reviewContents, newProjects, newClients] = await Promise.all([
+    const [paidInv, paidPf, approvedContents, reviewContents, newProjects, newClients] = await Promise.all([
       supabase.from('invoices').select('id, amount, paid_at, clients(name, company)').eq('status', 'paid').not('paid_at', 'is', null).gte('paid_at', since).order('paid_at', { ascending: false }).limit(10),
+      supabase.from('personal_income').select('id, amount, description, updated_at, due_date').eq('status', 'paid').gte('updated_at', since).order('updated_at', { ascending: false }).limit(10),
       supabase.from('contents').select('id, title, updated_at, project_id, projects(clients(name, company))').eq('status', 'approved').gte('updated_at', since).order('updated_at', { ascending: false }).limit(10),
       supabase.from('contents').select('id, title, updated_at, project_id, projects(clients(name, company))').eq('status', 'revision').gte('updated_at', since).order('updated_at', { ascending: false }).limit(10),
       supabase.from('projects').select('id, name, created_at, clients(name, company)').gte('created_at', since).order('created_at', { ascending: false }).limit(5),
@@ -307,9 +308,15 @@ export default function Dashboard() {
     const items: ActivityFeedItem[] = [];
     (paidInv.data ?? []).forEach((r: any) => items.push({
       id: `pi-${r.id}`, icon: CircleDollarSign, tone: 'text-emerald-400',
-      text: `Pagamento recebido — ${BRL(Number(r.amount))}`,
+      text: `Pagamento recebido (PJ) — ${BRL(Number(r.amount))}`,
       client: r.clients?.company || r.clients?.name || '—',
       time: r.paid_at,
+    }));
+    (paidPf.data ?? []).forEach((r: any) => items.push({
+      id: `pp-${r.id}`, icon: CircleDollarSign, tone: 'text-emerald-400',
+      text: `Receita PF recebida — ${BRL(Number(r.amount))}`,
+      client: r.description || 'Pessoal',
+      time: r.updated_at || r.due_date,
     }));
     (approvedContents.data ?? []).forEach((r: any) => items.push({
       id: `ac-${r.id}`, icon: CheckCircle2, tone: 'text-emerald-400',
