@@ -127,12 +127,13 @@ export default function Dashboard() {
 
     // Receita = faturas PJ pagas + receitas PF pagas
     // Despesas = expenses (PJ + PF, sem filtro de financial_type)
-    const [revInvCur, revInvPrev, revPfCur, revPfPrev, recv, expCur, expPrev] = await Promise.all([
+    const [revInvCur, revInvPrev, revPfCur, revPfPrev, recvInv, recvPf, expCur, expPrev] = await Promise.all([
       supabase.from('invoices').select('amount').eq('status', 'paid').gte('paid_at', monthStart).lte('paid_at', monthEnd + 'T23:59:59'),
       supabase.from('invoices').select('amount').eq('status', 'paid').gte('paid_at', prevStart).lte('paid_at', prevEnd + 'T23:59:59'),
       supabase.from('personal_income').select('amount').eq('status', 'paid').gte('due_date', monthStart).lte('due_date', monthEnd),
       supabase.from('personal_income').select('amount').eq('status', 'paid').gte('due_date', prevStart).lte('due_date', prevEnd),
       supabase.from('invoices').select('amount').eq('status', 'pending'),
+      supabase.from('personal_income').select('amount').eq('status', 'pending'),
       supabase.from('expenses').select('amount').gte('due_date', monthStart).lte('due_date', monthEnd),
       supabase.from('expenses').select('amount').gte('due_date', prevStart).lte('due_date', prevEnd),
     ]);
@@ -141,7 +142,7 @@ export default function Dashboard() {
     setFin({
       revenueMonth: sum(revInvCur) + sum(revPfCur),
       revenuePrevMonth: sum(revInvPrev) + sum(revPfPrev),
-      receivables: sum(recv),
+      receivables: sum(recvInv) + sum(recvPf),
       expensesMonth: sum(expCur),
       expensesPrevMonth: sum(expPrev),
     });
@@ -295,8 +296,9 @@ export default function Dashboard() {
   async function loadFeed() {
     // Build a human "agency feed" by combining recent meaningful events
     const since = subDays(new Date(), 14).toISOString();
-    const [paidInv, approvedContents, reviewContents, newProjects, newClients] = await Promise.all([
+    const [paidInv, paidPf, approvedContents, reviewContents, newProjects, newClients] = await Promise.all([
       supabase.from('invoices').select('id, amount, paid_at, clients(name, company)').eq('status', 'paid').not('paid_at', 'is', null).gte('paid_at', since).order('paid_at', { ascending: false }).limit(10),
+      supabase.from('personal_income').select('id, amount, description, updated_at, due_date').eq('status', 'paid').gte('updated_at', since).order('updated_at', { ascending: false }).limit(10),
       supabase.from('contents').select('id, title, updated_at, project_id, projects(clients(name, company))').eq('status', 'approved').gte('updated_at', since).order('updated_at', { ascending: false }).limit(10),
       supabase.from('contents').select('id, title, updated_at, project_id, projects(clients(name, company))').eq('status', 'revision').gte('updated_at', since).order('updated_at', { ascending: false }).limit(10),
       supabase.from('projects').select('id, name, created_at, clients(name, company)').gte('created_at', since).order('created_at', { ascending: false }).limit(5),
@@ -306,9 +308,15 @@ export default function Dashboard() {
     const items: ActivityFeedItem[] = [];
     (paidInv.data ?? []).forEach((r: any) => items.push({
       id: `pi-${r.id}`, icon: CircleDollarSign, tone: 'text-emerald-400',
-      text: `Pagamento recebido — ${BRL(Number(r.amount))}`,
+      text: `Pagamento recebido (PJ) — ${BRL(Number(r.amount))}`,
       client: r.clients?.company || r.clients?.name || '—',
       time: r.paid_at,
+    }));
+    (paidPf.data ?? []).forEach((r: any) => items.push({
+      id: `pp-${r.id}`, icon: CircleDollarSign, tone: 'text-emerald-400',
+      text: `Receita PF recebida — ${BRL(Number(r.amount))}`,
+      client: r.description || 'Pessoal',
+      time: r.updated_at || r.due_date,
     }));
     (approvedContents.data ?? []).forEach((r: any) => items.push({
       id: `ac-${r.id}`, icon: CheckCircle2, tone: 'text-emerald-400',
@@ -390,7 +398,7 @@ export default function Dashboard() {
             label="Faturamento do mês"
             value={BRL(fin.revenueMonth)}
             delta={revDelta}
-            deltaLabel="vs mês anterior"
+            deltaLabel="vs mês anterior (PJ + PF)"
             icon={Wallet}
             accent="from-emerald-500/20 to-emerald-500/0"
             iconColor="text-emerald-400"
@@ -398,7 +406,7 @@ export default function Dashboard() {
           <FinanceCard
             label="Contas a receber"
             value={BRL(fin.receivables)}
-            subtitle="Pendentes em aberto"
+            subtitle="Pendentes em aberto (PJ + PF)"
             icon={Receipt}
             accent="from-blue-500/20 to-blue-500/0"
             iconColor="text-blue-400"
@@ -407,7 +415,7 @@ export default function Dashboard() {
             label="Despesas do mês"
             value={BRL(fin.expensesMonth)}
             delta={expDelta}
-            deltaLabel="vs mês anterior"
+            deltaLabel="vs mês anterior (PJ + PF)"
             invertDelta
             icon={CircleDollarSign}
             accent="from-rose-500/20 to-rose-500/0"
@@ -416,7 +424,7 @@ export default function Dashboard() {
           <FinanceCard
             label="Lucro estimado"
             value={BRL(profit)}
-            subtitle="Receita − despesas"
+            subtitle="Receita − despesas (PJ + PF)"
             icon={PiggyBank}
             accent="from-violet-500/20 to-violet-500/0"
             iconColor="text-violet-400"
@@ -513,7 +521,7 @@ export default function Dashboard() {
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <div>
                 <CardTitle className="text-base text-foreground">Fluxo financeiro</CardTitle>
-                <p className="text-xs text-muted-foreground">Entradas vs saídas no período</p>
+                <p className="text-xs text-muted-foreground">Entradas (PJ + PF) vs saídas (PJ + PF) no período</p>
               </div>
               <div className="hidden gap-3 text-xs text-muted-foreground sm:flex">
                 <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Entrada</span>
@@ -556,7 +564,7 @@ export default function Dashboard() {
                 <Trophy className="h-4 w-4 text-amber-400" />
                 Receita por cliente
               </CardTitle>
-              <p className="text-xs text-muted-foreground">Top 5 — últimos 3 meses</p>
+              <p className="text-xs text-muted-foreground">Top 5 — últimos 3 meses (faturas PJ)</p>
             </CardHeader>
             <CardContent className="space-y-3">
               {topClients.length === 0 ? (
