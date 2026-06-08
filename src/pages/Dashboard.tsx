@@ -564,7 +564,7 @@ export default function Dashboard() {
                 <Trophy className="h-4 w-4 text-amber-400" />
                 Receita por cliente
               </CardTitle>
-              <p className="text-xs text-muted-foreground">Top 5 — últimos 3 meses</p>
+              <p className="text-xs text-muted-foreground">Top 5 — últimos 3 meses (faturas PJ)</p>
             </CardHeader>
             <CardContent className="space-y-3">
               {topClients.length === 0 ? (
