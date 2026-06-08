@@ -125,9 +125,13 @@ export default function Dashboard() {
     const prevStart = startOfMonth(subMonths(now, 1)).toISOString().split('T')[0];
     const prevEnd = endOfMonth(subMonths(now, 1)).toISOString().split('T')[0];
 
-    const [revCur, revPrev, recv, expCur, expPrev] = await Promise.all([
+    // Receita = faturas PJ pagas + receitas PF pagas
+    // Despesas = expenses (PJ + PF, sem filtro de financial_type)
+    const [revInvCur, revInvPrev, revPfCur, revPfPrev, recv, expCur, expPrev] = await Promise.all([
       supabase.from('invoices').select('amount').eq('status', 'paid').gte('paid_at', monthStart).lte('paid_at', monthEnd + 'T23:59:59'),
       supabase.from('invoices').select('amount').eq('status', 'paid').gte('paid_at', prevStart).lte('paid_at', prevEnd + 'T23:59:59'),
+      supabase.from('personal_income').select('amount').eq('status', 'paid').gte('due_date', monthStart).lte('due_date', monthEnd),
+      supabase.from('personal_income').select('amount').eq('status', 'paid').gte('due_date', prevStart).lte('due_date', prevEnd),
       supabase.from('invoices').select('amount').eq('status', 'pending'),
       supabase.from('expenses').select('amount').gte('due_date', monthStart).lte('due_date', monthEnd),
       supabase.from('expenses').select('amount').gte('due_date', prevStart).lte('due_date', prevEnd),
@@ -135,8 +139,8 @@ export default function Dashboard() {
 
     const sum = (r: any) => (r.data ?? []).reduce((a: number, x: any) => a + Number(x.amount || 0), 0);
     setFin({
-      revenueMonth: sum(revCur),
-      revenuePrevMonth: sum(revPrev),
+      revenueMonth: sum(revInvCur) + sum(revPfCur),
+      revenuePrevMonth: sum(revInvPrev) + sum(revPfPrev),
       receivables: sum(recv),
       expensesMonth: sum(expCur),
       expensesPrevMonth: sum(expPrev),
@@ -148,9 +152,10 @@ export default function Dashboard() {
     const from = subDays(new Date(), days - 1);
     const fromIso = from.toISOString().split('T')[0];
 
-    const [inv, exp] = await Promise.all([
+    const [inv, exp, pf] = await Promise.all([
       supabase.from('invoices').select('amount, paid_at').eq('status', 'paid').gte('paid_at', fromIso),
       supabase.from('expenses').select('amount, due_date').gte('due_date', fromIso),
+      supabase.from('personal_income').select('amount, due_date').eq('status', 'paid').gte('due_date', fromIso),
     ]);
 
     const buckets = eachDayOfInterval({ start: from, end: new Date() }).map((d) => ({
@@ -163,6 +168,12 @@ export default function Dashboard() {
     (inv.data ?? []).forEach((r: any) => {
       if (!r.paid_at) return;
       const d = new Date(r.paid_at);
+      const b = buckets.find((b) => isSameDay(b._d, d));
+      if (b) b.entrada += Number(r.amount || 0);
+    });
+    (pf.data ?? []).forEach((r: any) => {
+      if (!r.due_date) return;
+      const d = new Date(r.due_date);
       const b = buckets.find((b) => isSameDay(b._d, d));
       if (b) b.entrada += Number(r.amount || 0);
     });
