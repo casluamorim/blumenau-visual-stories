@@ -521,7 +521,7 @@ export default function Dashboard() {
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <div>
                 <CardTitle className="text-base text-foreground">Fluxo financeiro</CardTitle>
-                <p className="text-xs text-muted-foreground">Entradas vs saídas no período</p>
+                <p className="text-xs text-muted-foreground">Entradas (PJ + PF) vs saídas (PJ + PF) no período</p>
               </div>
               <div className="hidden gap-3 text-xs text-muted-foreground sm:flex">
                 <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Entrada</span>
