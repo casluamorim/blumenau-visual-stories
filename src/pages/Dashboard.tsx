@@ -127,12 +127,13 @@ export default function Dashboard() {
 
     // Receita = faturas PJ pagas + receitas PF pagas
     // Despesas = expenses (PJ + PF, sem filtro de financial_type)
-    const [revInvCur, revInvPrev, revPfCur, revPfPrev, recv, expCur, expPrev] = await Promise.all([
+    const [revInvCur, revInvPrev, revPfCur, revPfPrev, recvInv, recvPf, expCur, expPrev] = await Promise.all([
       supabase.from('invoices').select('amount').eq('status', 'paid').gte('paid_at', monthStart).lte('paid_at', monthEnd + 'T23:59:59'),
       supabase.from('invoices').select('amount').eq('status', 'paid').gte('paid_at', prevStart).lte('paid_at', prevEnd + 'T23:59:59'),
       supabase.from('personal_income').select('amount').eq('status', 'paid').gte('due_date', monthStart).lte('due_date', monthEnd),
       supabase.from('personal_income').select('amount').eq('status', 'paid').gte('due_date', prevStart).lte('due_date', prevEnd),
       supabase.from('invoices').select('amount').eq('status', 'pending'),
+      supabase.from('personal_income').select('amount').eq('status', 'pending'),
       supabase.from('expenses').select('amount').gte('due_date', monthStart).lte('due_date', monthEnd),
       supabase.from('expenses').select('amount').gte('due_date', prevStart).lte('due_date', prevEnd),
     ]);
@@ -141,7 +142,7 @@ export default function Dashboard() {
     setFin({
       revenueMonth: sum(revInvCur) + sum(revPfCur),
       revenuePrevMonth: sum(revInvPrev) + sum(revPfPrev),
-      receivables: sum(recv),
+      receivables: sum(recvInv) + sum(recvPf),
       expensesMonth: sum(expCur),
       expensesPrevMonth: sum(expPrev),
     });
