@@ -398,7 +398,7 @@ export default function Dashboard() {
             label="Faturamento do mês"
             value={BRL(fin.revenueMonth)}
             delta={revDelta}
-            deltaLabel="vs mês anterior"
+            deltaLabel="vs mês anterior (PJ + PF)"
             icon={Wallet}
             accent="from-emerald-500/20 to-emerald-500/0"
             iconColor="text-emerald-400"
@@ -406,7 +406,7 @@ export default function Dashboard() {
           <FinanceCard
             label="Contas a receber"
             value={BRL(fin.receivables)}
-            subtitle="Pendentes em aberto"
+            subtitle="Pendentes em aberto (PJ + PF)"
             icon={Receipt}
             accent="from-blue-500/20 to-blue-500/0"
             iconColor="text-blue-400"
@@ -415,7 +415,7 @@ export default function Dashboard() {
             label="Despesas do mês"
             value={BRL(fin.expensesMonth)}
             delta={expDelta}
-            deltaLabel="vs mês anterior"
+            deltaLabel="vs mês anterior (PJ + PF)"
             invertDelta
             icon={CircleDollarSign}
             accent="from-rose-500/20 to-rose-500/0"
@@ -424,7 +424,7 @@ export default function Dashboard() {
           <FinanceCard
             label="Lucro estimado"
             value={BRL(profit)}
-            subtitle="Receita − despesas"
+            subtitle="Receita − despesas (PJ + PF)"
             icon={PiggyBank}
             accent="from-violet-500/20 to-violet-500/0"
             iconColor="text-violet-400"
