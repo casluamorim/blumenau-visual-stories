@@ -538,7 +538,7 @@ function ContentApprovalCard({
   const [lightbox, setLightbox] = useState<{ url: string; name: string; type: 'image' | 'video' } | null>(null);
   const [authorName, setAuthorName] = useState('');
   const [draft, setDraft] = useState<{ media: string; copy: string; general: string }>({ media: '', copy: '', general: '' });
-  const drivePreview = content.drive_url ? getDrivePreviewUrl(content.drive_url) : null;
+  const drivePreview = content.drive_url ? getDrivePreviewUrl(content.drive_url, { autoplay: true, mute: true }) : null;
   const images = (content.files ?? []).filter(f => /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(f.name));
   const videos = (content.files ?? []).filter(f => /\.(mp4|mov|webm|avi|mkv)$/i.test(f.name));
   const others = (content.files ?? []).filter(f =>
