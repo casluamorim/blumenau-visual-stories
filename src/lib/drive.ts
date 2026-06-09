@@ -14,10 +14,14 @@ export function extractDriveFileId(url: string): string | null {
   return null;
 }
 
-export function getDrivePreviewUrl(url: string): string | null {
+export function getDrivePreviewUrl(url: string, opts?: { autoplay?: boolean; mute?: boolean }): string | null {
   const id = extractDriveFileId(url);
   if (!id) return null;
-  return `https://drive.google.com/file/d/${id}/preview`;
+  const params = new URLSearchParams();
+  if (opts?.autoplay) params.set('autoplay', '1');
+  if (opts?.mute) params.set('mute', '1');
+  const qs = params.toString();
+  return `https://drive.google.com/file/d/${id}/preview${qs ? `?${qs}` : ''}`;
 }
 
 export function isDriveUrl(url: string): boolean {

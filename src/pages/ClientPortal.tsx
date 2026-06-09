@@ -395,9 +395,16 @@ export default function ClientPortal() {
                         </div>
                         <Badge variant="outline" className={status.color}>{status.label}</Badge>
                       </div>
-                      {content.drive_url && getDrivePreviewUrl(content.drive_url) && (
+                      {content.drive_url && getDrivePreviewUrl(content.drive_url, { autoplay: true, mute: true }) && (
                         <div className="rounded-lg overflow-hidden border border-slate-200 bg-black aspect-video">
-                          <iframe src={getDrivePreviewUrl(content.drive_url)!} className="w-full h-full" allow="autoplay" allowFullScreen title={content.title} />
+                          <iframe
+                            src={getDrivePreviewUrl(content.drive_url, { autoplay: true, mute: true })!}
+                            className="w-full h-full"
+                            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                            allowFullScreen
+                            loading="lazy"
+                            title={content.title}
+                          />
                         </div>
                       )}
                       {content.files && content.files.length > 0 && (
@@ -531,7 +538,7 @@ function ContentApprovalCard({
   const [lightbox, setLightbox] = useState<{ url: string; name: string; type: 'image' | 'video' } | null>(null);
   const [authorName, setAuthorName] = useState('');
   const [draft, setDraft] = useState<{ media: string; copy: string; general: string }>({ media: '', copy: '', general: '' });
-  const drivePreview = content.drive_url ? getDrivePreviewUrl(content.drive_url) : null;
+  const drivePreview = content.drive_url ? getDrivePreviewUrl(content.drive_url, { autoplay: true, mute: true }) : null;
   const images = (content.files ?? []).filter(f => /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(f.name));
   const videos = (content.files ?? []).filter(f => /\.(mp4|mov|webm|avi|mkv)$/i.test(f.name));
   const others = (content.files ?? []).filter(f =>
@@ -590,7 +597,14 @@ function ContentApprovalCard({
                 </div>
                 {drivePreview ? (
                   <div className="rounded-lg overflow-hidden border border-slate-200 bg-black aspect-video">
-                    <iframe src={drivePreview} className="w-full h-full" allow="autoplay; fullscreen" allowFullScreen title={content.title} />
+                    <iframe
+                      src={drivePreview}
+                      className="w-full h-full"
+                      allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                      allowFullScreen
+                      loading="lazy"
+                      title={content.title}
+                    />
                   </div>
                 ) : (
                   <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
