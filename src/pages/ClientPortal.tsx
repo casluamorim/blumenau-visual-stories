@@ -395,9 +395,16 @@ export default function ClientPortal() {
                         </div>
                         <Badge variant="outline" className={status.color}>{status.label}</Badge>
                       </div>
-                      {content.drive_url && getDrivePreviewUrl(content.drive_url) && (
+                      {content.drive_url && getDrivePreviewUrl(content.drive_url, { autoplay: true, mute: true }) && (
                         <div className="rounded-lg overflow-hidden border border-slate-200 bg-black aspect-video">
-                          <iframe src={getDrivePreviewUrl(content.drive_url)!} className="w-full h-full" allow="autoplay" allowFullScreen title={content.title} />
+                          <iframe
+                            src={getDrivePreviewUrl(content.drive_url, { autoplay: true, mute: true })!}
+                            className="w-full h-full"
+                            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                            allowFullScreen
+                            loading="lazy"
+                            title={content.title}
+                          />
                         </div>
                       )}
                       {content.files && content.files.length > 0 && (
