@@ -597,7 +597,14 @@ function ContentApprovalCard({
                 </div>
                 {drivePreview ? (
                   <div className="rounded-lg overflow-hidden border border-slate-200 bg-black aspect-video">
-                    <iframe src={drivePreview} className="w-full h-full" allow="autoplay; fullscreen" allowFullScreen title={content.title} />
+                    <iframe
+                      src={drivePreview}
+                      className="w-full h-full"
+                      allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                      allowFullScreen
+                      loading="lazy"
+                      title={content.title}
+                    />
                   </div>
                 ) : (
                   <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
