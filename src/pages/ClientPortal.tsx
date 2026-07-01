@@ -98,14 +98,10 @@ export default function ClientPortal() {
     const looksLikeToken = /^[a-f0-9]{32,}$/i.test(identifier);
 
     if (looksLikeToken) {
-      const { data: tokenData } = await supabase
-        .from('client_access_tokens')
-        .select('client_id')
-        .eq('token', identifier)
-        .eq('is_active', true)
-        .maybeSingle();
-      clientId = tokenData?.client_id ?? null;
+      const { data: cid } = await supabase.rpc('get_client_id_by_access_token', { _token: identifier });
+      clientId = (cid as string | null) ?? null;
     } else {
+
       // Slug lookup. RLS allows anon read of clients that have an active token.
       const { data: clientBySlug } = await supabase
         .from('clients')

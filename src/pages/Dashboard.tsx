@@ -20,6 +20,8 @@ import {
 } from 'recharts';
 import { format, subDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addDays, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { expandOccurrencesForMonth } from '@/lib/financialMonthly';
+
 
 type Period = '7d' | '30d' | 'month' | 'quarter' | 'year';
 
@@ -120,33 +122,44 @@ export default function Dashboard() {
 
   async function loadFinancial() {
     const now = new Date();
+    const prev = subMonths(now, 1);
     const monthStart = startOfMonth(now).toISOString().split('T')[0];
     const monthEnd = endOfMonth(now).toISOString().split('T')[0];
-    const prevStart = startOfMonth(subMonths(now, 1)).toISOString().split('T')[0];
-    const prevEnd = endOfMonth(subMonths(now, 1)).toISOString().split('T')[0];
+    const prevStart = startOfMonth(prev).toISOString().split('T')[0];
+    const prevEnd = endOfMonth(prev).toISOString().split('T')[0];
 
-    // Receita = faturas PJ pagas + receitas PF pagas
-    // Despesas = expenses (PJ + PF, sem filtro de financial_type)
-    const [revInvCur, revInvPrev, revPfCur, revPfPrev, recvInv, recvPf, expCur, expPrev] = await Promise.all([
-      supabase.from('invoices').select('amount').eq('status', 'paid').gte('paid_at', monthStart).lte('paid_at', monthEnd + 'T23:59:59'),
-      supabase.from('invoices').select('amount').eq('status', 'paid').gte('paid_at', prevStart).lte('paid_at', prevEnd + 'T23:59:59'),
-      supabase.from('personal_income').select('amount').eq('status', 'paid').gte('due_date', monthStart).lte('due_date', monthEnd),
-      supabase.from('personal_income').select('amount').eq('status', 'paid').gte('due_date', prevStart).lte('due_date', prevEnd),
-      supabase.from('invoices').select('amount').eq('status', 'pending'),
-      supabase.from('personal_income').select('amount').eq('status', 'pending'),
-      supabase.from('expenses').select('amount').gte('due_date', monthStart).lte('due_date', monthEnd),
-      supabase.from('expenses').select('amount').gte('due_date', prevStart).lte('due_date', prevEnd),
+    // Puxa TODOS os itens (inclusive recorrentes/parents) e expande via mesma engine dos módulos Financeiro PJ/PF.
+    const recFields = 'id, due_date, amount, status, recurrence, recurrence_day, recurrence_end, is_recurring_active';
+    const [invAll, pfAll, expAll] = await Promise.all([
+      supabase.from('invoices').select(`${recFields}, parent_invoice_id`),
+      supabase.from('personal_income').select(`${recFields}, parent_income_id`),
+      supabase.from('expenses').select(`${recFields}, parent_expense_id`),
     ]);
 
-    const sum = (r: any) => (r.data ?? []).reduce((a: number, x: any) => a + Number(x.amount || 0), 0);
+    const invItems = (invAll.data ?? []) as any[];
+    const pfItems = (pfAll.data ?? []) as any[];
+    const expItems = (expAll.data ?? []) as any[];
+
+    const invCurOcc = expandOccurrencesForMonth(invItems, now);
+    const invPrevOcc = expandOccurrencesForMonth(invItems, prev);
+    const pfCurOcc = expandOccurrencesForMonth(pfItems, now);
+    const pfPrevOcc = expandOccurrencesForMonth(pfItems, prev);
+    const expCurOcc = expandOccurrencesForMonth(expItems, now);
+    const expPrevOcc = expandOccurrencesForMonth(expItems, prev);
+
+    const sumPaid = (occs: any[]) => occs.filter(o => o.status === 'paid').reduce((a, o) => a + Number(o.item.amount || 0), 0);
+    const sumPending = (occs: any[]) => occs.filter(o => o.status !== 'paid').reduce((a, o) => a + Number(o.item.amount || 0), 0);
+    const sumAll = (occs: any[]) => occs.reduce((a, o) => a + Number(o.item.amount || 0), 0);
+
     setFin({
-      revenueMonth: sum(revInvCur) + sum(revPfCur),
-      revenuePrevMonth: sum(revInvPrev) + sum(revPfPrev),
-      receivables: sum(recvInv) + sum(recvPf),
-      expensesMonth: sum(expCur),
-      expensesPrevMonth: sum(expPrev),
+      revenueMonth: sumPaid(invCurOcc) + sumPaid(pfCurOcc),
+      revenuePrevMonth: sumPaid(invPrevOcc) + sumPaid(pfPrevOcc),
+      receivables: sumPending(invCurOcc) + sumPending(pfCurOcc),
+      expensesMonth: sumAll(expCurOcc),
+      expensesPrevMonth: sumAll(expPrevOcc),
     });
   }
+
 
   async function loadCashflow() {
     const days = periodDays[period];
