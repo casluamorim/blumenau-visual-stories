@@ -60,6 +60,10 @@ export type Database = {
           id: string
           invoice_prefix: string
           next_invoice_number: number
+          pix_key_1_label: string | null
+          pix_key_2: string | null
+          pix_key_2_label: string | null
+          pix_key_2_type: string | null
           timezone: string
           updated_at: string
           whatsapp_template: string
@@ -79,6 +83,10 @@ export type Database = {
           id?: string
           invoice_prefix?: string
           next_invoice_number?: number
+          pix_key_1_label?: string | null
+          pix_key_2?: string | null
+          pix_key_2_label?: string | null
+          pix_key_2_type?: string | null
           timezone?: string
           updated_at?: string
           whatsapp_template?: string
@@ -98,6 +106,10 @@ export type Database = {
           id?: string
           invoice_prefix?: string
           next_invoice_number?: number
+          pix_key_1_label?: string | null
+          pix_key_2?: string | null
+          pix_key_2_label?: string | null
+          pix_key_2_type?: string | null
           timezone?: string
           updated_at?: string
           whatsapp_template?: string
@@ -222,6 +234,7 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
+          preferred_pix_key: string | null
           profile_type: string | null
           slug: string | null
           status: Database["public"]["Enums"]["client_status"]
@@ -240,6 +253,7 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
+          preferred_pix_key?: string | null
           profile_type?: string | null
           slug?: string | null
           status?: Database["public"]["Enums"]["client_status"]
@@ -258,6 +272,7 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
+          preferred_pix_key?: string | null
           profile_type?: string | null
           slug?: string | null
           status?: Database["public"]["Enums"]["client_status"]
@@ -1101,6 +1116,10 @@ export type Database = {
       }
       generate_unique_client_slug: {
         Args: { _base: string; _client_id: string }
+        Returns: string
+      }
+      get_client_id_by_access_token: {
+        Args: { _token: string }
         Returns: string
       }
       get_user_invite_by_token: {
