@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { MonthNavigator } from '@/components/financial/MonthNavigator';
 import { InlineEdit } from '@/components/InlineEdit';
+import { CreditCardImport } from '@/components/financial/CreditCardImport';
 import {
   expandOccurrencesForMonth,
   expandOccurrencesForMonths,
@@ -728,7 +729,8 @@ export default function Financial() {
 
           {/* EXPENSES TAB */}
           <TabsContent value="expenses" className="space-y-4">
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              <CreditCardImport onImported={loadData} />
               <Button onClick={openNewExpense}><Plus className="mr-2 h-4 w-4" /> Nova Despesa</Button>
             </div>
             {(() => {
