@@ -19,6 +19,7 @@ import {
   MessageCircle, RefreshCw, Paperclip, Sparkles
 } from 'lucide-react';
 import { MonthNavigator } from '@/components/financial/MonthNavigator';
+import { InlineEdit } from '@/components/InlineEdit';
 import {
   expandOccurrencesForMonth,
   expandOccurrencesForMonths,
