@@ -874,11 +874,15 @@ export default function Financial() {
                       const StIcon = st.icon;
                       return (
                         <TableRow key={q.id}>
-                          <TableCell className="font-medium text-foreground">{q.title}</TableCell>
+                          <TableCell className="font-medium text-foreground">
+                            <InlineEdit table="quotes" id={q.id} field="title" value={q.title} onSaved={loadData} />
+                          </TableCell>
                           <TableCell>{clientDisplay(q.clients)}</TableCell>
-                          <TableCell className="font-medium text-foreground">{fmt(Number(q.total_value))}</TableCell>
+                          <TableCell className="font-medium text-foreground">
+                            <InlineEdit table="quotes" id={q.id} field="total_value" value={q.total_value} type="number" format={(v) => fmt(Number(v))} onSaved={loadData} />
+                          </TableCell>
                           <TableCell className="text-muted-foreground">
-                            {q.valid_until ? new Date(q.valid_until).toLocaleDateString('pt-BR') : '—'}
+                            <InlineEdit table="quotes" id={q.id} field="valid_until" value={q.valid_until} type="date" format={(v) => v ? new Date(v).toLocaleDateString('pt-BR') : '—'} onSaved={loadData} />
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline" className={st.color}>
