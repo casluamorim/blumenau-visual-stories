@@ -779,7 +779,7 @@ export default function Financial() {
                           <TableRow key={`${exp.id}-${occ.occurrence_date}-${idx}`}>
                             <TableCell className="font-medium text-foreground">
                               <div className="flex items-center gap-2">
-                                {exp.description}
+                                <InlineEdit table="expenses" id={exp.id} field="description" value={exp.description} disabled={occ.virtual} onSaved={loadData} />
                                 {occ.virtual && (
                                   <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px]">
                                     <Sparkles className="mr-1 h-2.5 w-2.5" />Previsto
@@ -793,9 +793,11 @@ export default function Financial() {
                               </div>
                             </TableCell>
                             <TableCell className="text-muted-foreground">{exp.category ?? '—'}</TableCell>
-                            <TableCell className="font-medium text-destructive">{fmt(Number(exp.amount))}</TableCell>
+                            <TableCell className="font-medium text-destructive">
+                              <InlineEdit table="expenses" id={exp.id} field="amount" value={exp.amount} type="number" disabled={occ.virtual} format={(v) => fmt(Number(v))} onSaved={loadData} />
+                            </TableCell>
                             <TableCell className="text-muted-foreground">
-                              {new Date(occ.occurrence_date).toLocaleDateString('pt-BR')}
+                              <InlineEdit table="expenses" id={exp.id} field="due_date" value={exp.due_date} type="date" disabled={occ.virtual} format={(v) => v ? new Date(v).toLocaleDateString('pt-BR') : '—'} display={new Date(occ.occurrence_date).toLocaleDateString('pt-BR')} onSaved={loadData} />
                             </TableCell>
                             <TableCell>
                               {exp.recurrence === 'recurring' ? (
