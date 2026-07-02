@@ -19,6 +19,7 @@ import {
   MessageCircle, RefreshCw, Paperclip, Sparkles
 } from 'lucide-react';
 import { MonthNavigator } from '@/components/financial/MonthNavigator';
+import { InlineEdit } from '@/components/InlineEdit';
 import {
   expandOccurrencesForMonth,
   expandOccurrencesForMonths,
@@ -659,7 +660,7 @@ export default function Financial() {
                           <TableRow key={`${inv.id}-${occ.occurrence_date}-${idx}`}>
                             <TableCell className="font-medium text-foreground">
                               <div className="flex items-center gap-2">
-                                {inv.title}
+                                <InlineEdit table="invoices" id={inv.id} field="title" value={inv.title} disabled={occ.virtual} onSaved={loadData} />
                                 {occ.virtual && (
                                   <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px]">
                                     <Sparkles className="mr-1 h-2.5 w-2.5" />Previsto
@@ -668,9 +669,11 @@ export default function Financial() {
                               </div>
                             </TableCell>
                             <TableCell>{clientDisplay(inv.clients)}</TableCell>
-                            <TableCell className="font-medium text-foreground">{fmt(Number(inv.amount))}</TableCell>
+                            <TableCell className="font-medium text-foreground">
+                              <InlineEdit table="invoices" id={inv.id} field="amount" value={inv.amount} type="number" disabled={occ.virtual} format={(v) => fmt(Number(v))} onSaved={loadData} />
+                            </TableCell>
                             <TableCell className="text-muted-foreground">
-                              {new Date(occ.occurrence_date).toLocaleDateString('pt-BR')}
+                              <InlineEdit table="invoices" id={inv.id} field="due_date" value={inv.due_date} type="date" disabled={occ.virtual} format={(v) => v ? new Date(v).toLocaleDateString('pt-BR') : '—'} display={new Date(occ.occurrence_date).toLocaleDateString('pt-BR')} onSaved={loadData} />
                             </TableCell>
                             <TableCell>
                               {inv.recurrence === 'recurring' ? (
@@ -776,7 +779,7 @@ export default function Financial() {
                           <TableRow key={`${exp.id}-${occ.occurrence_date}-${idx}`}>
                             <TableCell className="font-medium text-foreground">
                               <div className="flex items-center gap-2">
-                                {exp.description}
+                                <InlineEdit table="expenses" id={exp.id} field="description" value={exp.description} disabled={occ.virtual} onSaved={loadData} />
                                 {occ.virtual && (
                                   <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px]">
                                     <Sparkles className="mr-1 h-2.5 w-2.5" />Previsto
@@ -790,9 +793,11 @@ export default function Financial() {
                               </div>
                             </TableCell>
                             <TableCell className="text-muted-foreground">{exp.category ?? '—'}</TableCell>
-                            <TableCell className="font-medium text-destructive">{fmt(Number(exp.amount))}</TableCell>
+                            <TableCell className="font-medium text-destructive">
+                              <InlineEdit table="expenses" id={exp.id} field="amount" value={exp.amount} type="number" disabled={occ.virtual} format={(v) => fmt(Number(v))} onSaved={loadData} />
+                            </TableCell>
                             <TableCell className="text-muted-foreground">
-                              {new Date(occ.occurrence_date).toLocaleDateString('pt-BR')}
+                              <InlineEdit table="expenses" id={exp.id} field="due_date" value={exp.due_date} type="date" disabled={occ.virtual} format={(v) => v ? new Date(v).toLocaleDateString('pt-BR') : '—'} display={new Date(occ.occurrence_date).toLocaleDateString('pt-BR')} onSaved={loadData} />
                             </TableCell>
                             <TableCell>
                               {exp.recurrence === 'recurring' ? (
@@ -869,11 +874,15 @@ export default function Financial() {
                       const StIcon = st.icon;
                       return (
                         <TableRow key={q.id}>
-                          <TableCell className="font-medium text-foreground">{q.title}</TableCell>
+                          <TableCell className="font-medium text-foreground">
+                            <InlineEdit table="quotes" id={q.id} field="title" value={q.title} onSaved={loadData} />
+                          </TableCell>
                           <TableCell>{clientDisplay(q.clients)}</TableCell>
-                          <TableCell className="font-medium text-foreground">{fmt(Number(q.total_value))}</TableCell>
+                          <TableCell className="font-medium text-foreground">
+                            <InlineEdit table="quotes" id={q.id} field="total_value" value={q.total_value} type="number" format={(v) => fmt(Number(v))} onSaved={loadData} />
+                          </TableCell>
                           <TableCell className="text-muted-foreground">
-                            {q.valid_until ? new Date(q.valid_until).toLocaleDateString('pt-BR') : '—'}
+                            <InlineEdit table="quotes" id={q.id} field="valid_until" value={q.valid_until} type="date" format={(v) => v ? new Date(v).toLocaleDateString('pt-BR') : '—'} onSaved={loadData} />
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline" className={st.color}>

@@ -18,6 +18,7 @@ import {
   DollarSign, RefreshCw, Search, Paperclip, Sparkles
 } from 'lucide-react';
 import { MonthNavigator } from '@/components/financial/MonthNavigator';
+import { InlineEdit } from '@/components/InlineEdit';
 import {
   expandOccurrencesForMonth, expandOccurrencesForMonths, monthLabel, Occurrence,
 } from '@/lib/financialMonthly';
@@ -300,7 +301,7 @@ export default function FinancialPersonal() {
                     <TableRow key={`${r.id}-${occ.occurrence_date}-${idx}`}>
                       <TableCell className="font-medium text-foreground">
                         <div className="flex items-center gap-2">
-                          {r.description}
+                          <InlineEdit table={isIncome ? 'personal_income' : 'expenses'} id={r.id} field="description" value={r.description} disabled={occ.virtual} onSaved={loadData} />
                           {occ.virtual && (
                             <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px]">
                               <Sparkles className="mr-1 h-2.5 w-2.5" />Previsto
@@ -310,8 +311,12 @@ export default function FinancialPersonal() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{r.category ?? '—'}</TableCell>
-                      <TableCell className={`font-medium ${isIncome ? 'text-emerald-400' : 'text-destructive'}`}>{fmt(Number(r.amount))}</TableCell>
-                      <TableCell className="text-muted-foreground">{new Date(occ.occurrence_date).toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell className={`font-medium ${isIncome ? 'text-emerald-400' : 'text-destructive'}`}>
+                        <InlineEdit table={isIncome ? 'personal_income' : 'expenses'} id={r.id} field="amount" value={r.amount} type="number" disabled={occ.virtual} format={(v) => fmt(Number(v))} onSaved={loadData} />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        <InlineEdit table={isIncome ? 'personal_income' : 'expenses'} id={r.id} field="due_date" value={r.due_date} type="date" disabled={occ.virtual} format={(v) => v ? new Date(v).toLocaleDateString('pt-BR') : '—'} display={new Date(occ.occurrence_date).toLocaleDateString('pt-BR')} onSaved={loadData} />
+                      </TableCell>
                       <TableCell>
                         {r.recurrence === 'recurring' ? (
                           <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
