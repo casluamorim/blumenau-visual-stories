@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { MonthNavigator } from '@/components/financial/MonthNavigator';
 import { InlineEdit } from '@/components/InlineEdit';
+import { CreditCardImport } from '@/components/financial/CreditCardImport';
 import {
   expandOccurrencesForMonth,
   expandOccurrencesForMonths,
