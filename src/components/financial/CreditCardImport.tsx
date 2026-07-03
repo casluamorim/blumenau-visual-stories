@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 interface Props {
   onImported: () => void;
+  financialType?: 'pj' | 'pf';
 }
 
 interface ParsedRow {
@@ -99,7 +100,7 @@ function parseCsv(text: string): string[][] {
   return rows;
 }
 
-export function CreditCardImport({ onImported }: Props) {
+export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [fileName, setFileName] = useState('');
@@ -172,7 +173,7 @@ export function CreditCardImport({ onImported }: Props) {
       category: r.category,
       due_date: r.date,
       status: 'paid' as any,
-      financial_type: 'pj' as any,
+      financial_type: financialType as any,
       recurrence: 'none' as any,
       payment_method: 'credit_card',
       notes: fileName ? `Importado de ${fileName}` : 'Importado do cartão de crédito',
