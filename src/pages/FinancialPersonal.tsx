@@ -311,7 +311,7 @@ export default function FinancialPersonal() {
                           {r.attachment_url && <a href={r.attachment_url} target="_blank"><Paperclip className="h-3 w-3 text-muted-foreground" /></a>}
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{r.category ?? '—'}</TableCell>
+                      <TableCell><InlineCategorySelect table={isIncome ? 'personal_income' : 'expenses'} id={r.id} value={r.category} disabled={occ.virtual} onSaved={loadData} /></TableCell>
                       <TableCell className={`font-medium ${isIncome ? 'text-emerald-400' : 'text-destructive'}`}>
                         <InlineEdit table={isIncome ? 'personal_income' : 'expenses'} id={r.id} field="amount" value={r.amount} type="number" disabled={occ.virtual} format={(v) => fmt(Number(v))} onSaved={loadData} />
                       </TableCell>
