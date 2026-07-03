@@ -307,7 +307,13 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
                       <TableCell className="text-muted-foreground text-sm">{new Date(r.date).toLocaleDateString('pt-BR')}</TableCell>
                       <TableCell className="text-sm">{r.description}</TableCell>
                       <TableCell>
-                        <Select value={r.category} onValueChange={v => setRows(rs => rs.map((x, j) => j === i ? { ...x, category: v } : x))}>
+                        <Select value={r.category} onValueChange={v => {
+                          const key = descKey(r.description);
+                          const learned = loadLearned();
+                          learned[key] = v;
+                          saveLearned(learned);
+                          setRows(rs => rs.map(x => descKey(x.description) === key ? { ...x, category: v } : x));
+                        }}>
                           <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                           <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                         </Select>
