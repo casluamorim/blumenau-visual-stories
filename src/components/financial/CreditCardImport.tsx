@@ -119,26 +119,53 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
       const text = String(reader.result || '');
       const csv = parseCsv(text);
       if (!csv.length) { toast({ title: 'CSV vazio', variant: 'destructive' }); return; }
-      const header = csv[0].map(h => h.toLowerCase().trim());
-      const dateIdx = header.findIndex(h => /data|date/.test(h));
-      const descIdx = header.findIndex(h => /desc|titulo|title|estabelec|hist|lançam|lancam|memo/.test(h));
-      const amountIdx = header.findIndex(h => /valor|amount|montante|value/.test(h));
-      const hasHeader = dateIdx >= 0 && amountIdx >= 0;
-      const body = hasHeader ? csv.slice(1) : csv;
-      const di = hasHeader ? dateIdx : 0;
-      const de = hasHeader ? (descIdx >= 0 ? descIdx : 1) : 1;
-      const ai = hasHeader ? amountIdx : 2;
+
+      // Find the header row anywhere in the file (Sicredi/Nubank/Itaú etc. can have preamble lines)
+      let headerRowIdx = -1;
+      let dateIdx = -1, descIdx = -1, amountIdx = -1;
+      for (let i = 0; i < Math.min(csv.length, 60); i++) {
+        const h = csv[i].map(c => (c ?? '').toLowerCase().trim());
+        const d = h.findIndex(c => /^data($|\b)|date/.test(c));
+        const de = h.findIndex(c => /desc|estabelec|hist|lançam|lancam|memo|titulo|title/.test(c));
+        const a = h.findIndex(c => /^valor($|\s*\(r\$\))|amount|montante|^value$/.test(c));
+        if (d >= 0 && a >= 0) {
+          headerRowIdx = i; dateIdx = d; descIdx = de; amountIdx = a;
+          break;
+        }
+      }
+
+      let body: string[][];
+      let di: number, de: number, ai: number, nameIdx = -1;
+      if (headerRowIdx >= 0) {
+        body = csv.slice(headerRowIdx + 1);
+        di = dateIdx; de = descIdx >= 0 ? descIdx : 1; ai = amountIdx;
+        const h = csv[headerRowIdx].map(c => (c ?? '').toLowerCase().trim());
+        nameIdx = h.findIndex(c => /^nome$|portador|titular|cardholder/.test(c));
+      } else {
+        // Fallback: assume first row is header with date,desc,amount
+        body = csv.slice(1);
+        di = 0; de = 1; ai = 2;
+      }
+
       const parsed: ParsedRow[] = [];
       for (const r of body) {
-        const date = normalizeDate(r[di] ?? '');
-        const desc = (r[de] ?? '').trim();
-        const amt = normalizeAmount(r[ai] ?? '');
-        if (!date || !desc || !Number.isFinite(amt)) continue;
-        // Credit-card statements: positive = despesa, negative = pagamento/estorno
-        const amount = Math.abs(amt);
-        if (amt < 0) continue; // ignore payments/refunds
+        if (!r || r.every(c => !c || !String(c).trim())) continue;
+        const rawDate = r[di] ?? '';
+        const rawDesc = (r[de] ?? '').trim();
+        const rawAmt = r[ai] ?? '';
+        const date = normalizeDate(rawDate);
+        const amt = normalizeAmount(rawAmt);
+        if (!date || !rawDesc || !Number.isFinite(amt)) continue;
+        // Skip payments/credits (negative on Sicredi = pagamento/estorno)
+        if (amt < 0) continue;
+        if (amt === 0) continue;
+        // Skip obvious non-purchase rows
+        if (/pagamento|pag fat|credito taxa|cr[ée]dito/i.test(rawDesc)) continue;
+        let desc = rawDesc.replace(/\s{2,}/g, ' ');
+        const holder = nameIdx >= 0 ? (r[nameIdx] ?? '').trim() : '';
+        if (holder) desc = `${desc} — ${holder}`;
         parsed.push({
-          date, description: desc, amount,
+          date, description: desc, amount: Math.abs(amt),
           category: suggestCategory(desc), selected: true,
         });
       }
@@ -152,6 +179,7 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
     };
     reader.readAsText(f, 'utf-8');
   }
+
 
   const selectedTotals = useMemo(() => {
     const map: Record<string, number> = {};
