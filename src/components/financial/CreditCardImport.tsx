@@ -83,7 +83,10 @@ function parseCsv(text: string): string[][] {
   // Split lines and detect delimiter
   const lines = text.split(/\r?\n/).filter(l => l.trim().length);
   if (!lines.length) return [];
-  const delim = lines[0].includes(';') && !lines[0].includes(',') ? ';' : ',';
+  const semi = (lines[0].match(/;/g) || []).length;
+  const comma = (lines[0].match(/,/g) || []).length;
+  const delim = semi >= comma ? ';' : ',';
+
   const rows: string[][] = [];
   for (const line of lines) {
     const out: string[] = [];
