@@ -167,6 +167,7 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
         di = 0; de = 1; ai = 2;
       }
 
+      const learned = loadLearned();
       const parsed: ParsedRow[] = [];
       for (const r of body) {
         if (!r || r.every(c => !c || !String(c).trim())) continue;
