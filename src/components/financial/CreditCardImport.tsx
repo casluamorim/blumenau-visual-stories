@@ -258,9 +258,8 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
       due_date: r.date,
       status: 'paid' as any,
       financial_type: financialType as any,
-      recurrence: 'none' as any,
-      payment_method: 'credit_card',
-      notes: fileName ? `Importado de ${fileName}` : 'Importado do cartão de crédito',
+      recurrence: 'one_time' as any,
+      notes: `[Cartão de Crédito]${fileName ? ` Importado de ${fileName}` : ''}`,
       created_by: user?.id,
     }));
     const { error } = await supabase.from('expenses').insert(payload as any);
