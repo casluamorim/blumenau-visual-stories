@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 interface Props {
   onImported: () => void;
+  financialType?: 'pj' | 'pf';
 }
 
 interface ParsedRow {
