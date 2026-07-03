@@ -100,7 +100,7 @@ function parseCsv(text: string): string[][] {
   return rows;
 }
 
-export function CreditCardImport({ onImported }: Props) {
+export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [fileName, setFileName] = useState('');
