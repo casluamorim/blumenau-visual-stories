@@ -187,7 +187,7 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
         if (holder) desc = `${desc} — ${holder}`;
         parsed.push({
           date, description: desc, amount: Math.abs(amt),
-          category: suggestCategory(desc), selected: true,
+          category: suggestCategory(desc, learned), selected: true,
         });
       }
       if (!parsed.length) {
