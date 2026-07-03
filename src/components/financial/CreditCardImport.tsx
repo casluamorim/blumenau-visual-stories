@@ -25,23 +25,58 @@ interface ParsedRow {
   selected: boolean;
 }
 
-const CATEGORIES = [
-  'Alimentação', 'Transporte', 'Assinaturas', 'Software/SaaS', 'Marketing',
-  'Escritório', 'Impostos', 'Serviços', 'Educação', 'Saúde', 'Lazer', 'Outros',
+export const CC_CATEGORIES = [
+  'Alimentação', 'Mercado', 'Restaurante', 'Delivery',
+  'Transporte', 'Gasolina', 'Estacionamento', 'Pedágio', 'Manutenção Veículo',
+  'Viagem', 'Hospedagem', 'Passagem Aérea',
+  'Assinaturas', 'Software/SaaS', 'Telefonia/Internet',
+  'Marketing', 'Publicidade Online',
+  'Escritório', 'Papelaria',
+  'Impostos', 'Taxas Bancárias', 'Juros',
+  'Serviços', 'Manutenção Casa', 'Aluguel', 'Condomínio', 'Água', 'Luz', 'Gás',
+  'Educação', 'Livros',
+  'Saúde', 'Farmácia', 'Academia',
+  'Lazer', 'Streaming', 'Presentes', 'Vestuário',
+  'Pets', 'Filhos', 'Doações',
+  'Outros',
 ];
+const CATEGORIES = CC_CATEGORIES;
 
 const KEYWORD_MAP: Array<[RegExp, string]> = [
-  [/ifood|uber eats|rappi|restaurante|padaria|lanchon|mercado|super|hortifr/i, 'Alimentação'],
-  [/uber|99app|99 |taxi|posto|combust|gasolin|estacion|metro|onibus/i, 'Transporte'],
-  [/netflix|spotify|prime|hbo|disney|youtube|apple\.com\/bill|google.*(one|storage)/i, 'Assinaturas'],
-  [/openai|chatgpt|anthropic|figma|notion|canva|adobe|github|vercel|cloudflare|aws|google cloud|lovable|supabase/i, 'Software/SaaS'],
-  [/meta ads|facebook|instagram ads|google ads|tiktok ads|linkedin ads/i, 'Marketing'],
-  [/papelaria|kalunga|escrit/i, 'Escritório'],
-  [/das |simples nacional|receita|imposto|inss|iss/i, 'Impostos'],
-  [/farmac|drogaria|hospital|clinica|consulta|academia|gympass/i, 'Saúde'],
-  [/cinema|ingresso|show|bar |pub /i, 'Lazer'],
-  [/curso|udemy|hotmart|alura|coursera/i, 'Educação'],
+  [/posto|combust|gasolin|shell|ipiranga|petrobras|ale sat|br mania/i, 'Gasolina'],
+  [/estacion|zona azul|estapar|multipark/i, 'Estacionamento'],
+  [/pedagio|pedágio|ecovias|autoban|ccr|conectcar|sem parar/i, 'Pedágio'],
+  [/oficina|mecanic|autopeca|pneu|borracharia/i, 'Manutenção Veículo'],
+  [/uber|99app|99 |taxi|cabify|metro|onibus|blablacar/i, 'Transporte'],
+  [/hotel|airbnb|booking|pousada|resort|hostel/i, 'Hospedagem'],
+  [/latam|gol|azul|smiles|decolar|123 ?milhas|kiwi\.com|avianca/i, 'Passagem Aérea'],
+  [/ifood|rappi|zé delivery|ze delivery|james delivery/i, 'Delivery'],
+  [/restaurante|lanchon|padaria|pizzar|churrasc|hamburg|bar |pub /i, 'Restaurante'],
+  [/mercado|super|hortifr|atacad|carrefour|assai|pao de acucar|extra |sams club/i, 'Mercado'],
+  [/farmac|drogaria|drogasil|pacheco|raia|panvel/i, 'Farmácia'],
+  [/hospital|clinica|consulta|laborat|exame|dentist|psicolog/i, 'Saúde'],
+  [/academia|gympass|smartfit|crossfit|pilates/i, 'Academia'],
+  [/netflix|spotify|prime video|hbo|disney|globoplay|deezer|paramount|youtube premium/i, 'Streaming'],
+  [/apple\.com\/bill|google.*(one|storage|play)|icloud|dropbox/i, 'Assinaturas'],
+  [/openai|chatgpt|anthropic|figma|notion|canva|adobe|github|vercel|cloudflare|aws|google cloud|lovable|supabase|linear|slack/i, 'Software/SaaS'],
+  [/meta ads|facebook ads|instagram ads|google ads|tiktok ads|linkedin ads/i, 'Publicidade Online'],
+  [/vivo|claro|tim|oi |nextel|net |algar|sky|internet/i, 'Telefonia/Internet'],
+  [/papelaria|kalunga/i, 'Papelaria'],
+  [/das |simples nacional|receita|imposto|inss|iss|darf/i, 'Impostos'],
+  [/tarifa|anuidade|juros|iof/i, 'Taxas Bancárias'],
+  [/aluguel|imobili/i, 'Aluguel'],
+  [/condomin/i, 'Condomínio'],
+  [/sabesp|copasa|cedae|agua |água/i, 'Água'],
+  [/enel|eletropaulo|light|cemig|copel|energisa|celpe|equatorial/i, 'Luz'],
+  [/comgas|gás|gas natural/i, 'Gás'],
+  [/curso|udemy|hotmart|alura|coursera|edx|escola/i, 'Educação'],
+  [/livro|amazon.*livr|estante virtual|saraiva/i, 'Livros'],
+  [/cinema|ingresso|show|teatro|parque|kinoplex|cinemark/i, 'Lazer'],
+  [/petz|cobasi|petshop|veterin/i, 'Pets'],
+  [/renner|c&a|riachuelo|zara|nike|adidas|centauro|dafiti|shein/i, 'Vestuário'],
+  [/presente|gift/i, 'Presentes'],
 ];
+
 
 const LEARNED_KEY = 'cc-import-category-map-v1';
 
@@ -223,9 +258,8 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
       due_date: r.date,
       status: 'paid' as any,
       financial_type: financialType as any,
-      recurrence: 'none' as any,
-      payment_method: 'credit_card',
-      notes: fileName ? `Importado de ${fileName}` : 'Importado do cartão de crédito',
+      recurrence: 'one_time' as any,
+      notes: `[Cartão de Crédito]${fileName ? ` Importado de ${fileName}` : ''}`,
       created_by: user?.id,
     }));
     const { error } = await supabase.from('expenses').insert(payload as any);
