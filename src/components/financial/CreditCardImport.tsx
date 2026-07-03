@@ -43,7 +43,24 @@ const KEYWORD_MAP: Array<[RegExp, string]> = [
   [/curso|udemy|hotmart|alura|coursera/i, 'Educação'],
 ];
 
-function suggestCategory(desc: string): string {
+const LEARNED_KEY = 'cc-import-category-map-v1';
+
+function descKey(desc: string): string {
+  return desc.toLowerCase().replace(/\s+—\s+.*$/, '').replace(/\s{2,}/g, ' ').trim();
+}
+
+function loadLearned(): Record<string, string> {
+  try { return JSON.parse(localStorage.getItem(LEARNED_KEY) || '{}'); } catch { return {}; }
+}
+
+function saveLearned(map: Record<string, string>) {
+  try { localStorage.setItem(LEARNED_KEY, JSON.stringify(map)); } catch {}
+}
+
+function suggestCategory(desc: string, learned?: Record<string, string>): string {
+  const l = learned ?? loadLearned();
+  const k = descKey(desc);
+  if (l[k]) return l[k];
   for (const [rx, cat] of KEYWORD_MAP) if (rx.test(desc)) return cat;
   return 'Outros';
 }
@@ -150,6 +167,7 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
         di = 0; de = 1; ai = 2;
       }
 
+      const learned = loadLearned();
       const parsed: ParsedRow[] = [];
       for (const r of body) {
         if (!r || r.every(c => !c || !String(c).trim())) continue;
@@ -169,7 +187,7 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
         if (holder) desc = `${desc} — ${holder}`;
         parsed.push({
           date, description: desc, amount: Math.abs(amt),
-          category: suggestCategory(desc), selected: true,
+          category: suggestCategory(desc, learned), selected: true,
         });
       }
       if (!parsed.length) {
@@ -289,7 +307,13 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
                       <TableCell className="text-muted-foreground text-sm">{new Date(r.date).toLocaleDateString('pt-BR')}</TableCell>
                       <TableCell className="text-sm">{r.description}</TableCell>
                       <TableCell>
-                        <Select value={r.category} onValueChange={v => setRows(rs => rs.map((x, j) => j === i ? { ...x, category: v } : x))}>
+                        <Select value={r.category} onValueChange={v => {
+                          const key = descKey(r.description);
+                          const learned = loadLearned();
+                          learned[key] = v;
+                          saveLearned(learned);
+                          setRows(rs => rs.map(x => descKey(x.description) === key ? { ...x, category: v } : x));
+                        }}>
                           <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                           <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                         </Select>
