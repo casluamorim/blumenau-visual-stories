@@ -794,7 +794,7 @@ export default function Financial() {
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell className="text-muted-foreground">{exp.category ?? '—'}</TableCell>
+                            <TableCell><InlineCategorySelect table="expenses" id={exp.id} value={exp.category} disabled={occ.virtual} onSaved={loadData} /></TableCell>
                             <TableCell className="font-medium text-destructive">
                               <InlineEdit table="expenses" id={exp.id} field="amount" value={exp.amount} type="number" disabled={occ.virtual} format={(v) => fmt(Number(v))} onSaved={loadData} />
                             </TableCell>
