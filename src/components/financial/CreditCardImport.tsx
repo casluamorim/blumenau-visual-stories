@@ -173,7 +173,7 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
       category: r.category,
       due_date: r.date,
       status: 'paid' as any,
-      financial_type: 'pj' as any,
+      financial_type: financialType as any,
       recurrence: 'none' as any,
       payment_method: 'credit_card',
       notes: fileName ? `Importado de ${fileName}` : 'Importado do cartão de crédito',
