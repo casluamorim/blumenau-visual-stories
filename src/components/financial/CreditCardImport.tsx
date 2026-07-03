@@ -43,7 +43,24 @@ const KEYWORD_MAP: Array<[RegExp, string]> = [
   [/curso|udemy|hotmart|alura|coursera/i, 'Educação'],
 ];
 
-function suggestCategory(desc: string): string {
+const LEARNED_KEY = 'cc-import-category-map-v1';
+
+function descKey(desc: string): string {
+  return desc.toLowerCase().replace(/\s+—\s+.*$/, '').replace(/\s{2,}/g, ' ').trim();
+}
+
+function loadLearned(): Record<string, string> {
+  try { return JSON.parse(localStorage.getItem(LEARNED_KEY) || '{}'); } catch { return {}; }
+}
+
+function saveLearned(map: Record<string, string>) {
+  try { localStorage.setItem(LEARNED_KEY, JSON.stringify(map)); } catch {}
+}
+
+function suggestCategory(desc: string, learned?: Record<string, string>): string {
+  const l = learned ?? loadLearned();
+  const k = descKey(desc);
+  if (l[k]) return l[k];
   for (const [rx, cat] of KEYWORD_MAP) if (rx.test(desc)) return cat;
   return 'Outros';
 }
