@@ -411,7 +411,7 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={reset}>Cancelar</Button>
               <Button onClick={importAll} disabled={importing}>
-                {importing ? 'Importando...' : `Importar ${rows.filter(r => r.selected).length} despesa(s)`}
+                {importing ? 'Criando fatura...' : `Criar fatura com ${rows.filter(r => r.selected).length} item(ns)`}
               </Button>
             </div>
           </div>
