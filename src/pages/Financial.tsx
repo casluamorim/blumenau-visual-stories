@@ -22,6 +22,8 @@ import { MonthNavigator } from '@/components/financial/MonthNavigator';
 import { InlineEdit } from '@/components/InlineEdit';
 import { CreditCardImport } from '@/components/financial/CreditCardImport';
 import { InlineCategorySelect } from '@/components/financial/InlineCategorySelect';
+import { CardExpenseDialog } from '@/components/financial/CardExpenseDialog';
+import { CreditCard } from 'lucide-react';
 import {
   expandOccurrencesForMonth,
   expandOccurrencesForMonths,
