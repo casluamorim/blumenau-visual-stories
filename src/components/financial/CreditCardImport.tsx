@@ -326,7 +326,11 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
                 type="file" accept=".csv,text/csv"
                 onChange={e => {
                   const f = e.target.files?.[0];
-                  if (f) { setFileName(f.name); handleFile(f); }
+                  if (f) {
+                    setFileName(f.name);
+                    if (!cardTitle) setCardTitle(`Cartão — ${f.name.replace(/\.[^.]+$/, '')}`);
+                    handleFile(f);
+                  }
                 }}
                 className="max-w-xs mx-auto"
               />
