@@ -58,6 +58,7 @@ export default function FinancialPersonal() {
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
   const [editingIncome, setEditingIncome] = useState<PFIncome | null>(null);
   const [editingExpense, setEditingExpense] = useState<PFExpense | null>(null);
+  const [cardDialog, setCardDialog] = useState<{ open: boolean; parentId?: string; parentTitle?: string }>({ open: false });
   const { toast } = useToast();
   const { user } = useAuth();
 
