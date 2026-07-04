@@ -26,6 +26,7 @@ interface ParsedRow {
 }
 
 export const CC_CATEGORIES = [
+  'Cartão de Crédito',
   'Alimentação', 'Mercado', 'Restaurante', 'Delivery',
   'Transporte', 'Gasolina', 'Estacionamento', 'Pedágio', 'Manutenção Veículo',
   'Viagem', 'Hospedagem', 'Passagem Aérea',
