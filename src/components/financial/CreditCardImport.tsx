@@ -340,9 +340,19 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
 
         {rows.length > 0 && (
           <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 rounded-lg border border-border p-3 bg-muted/20">
+              <div>
+                <Label className="text-xs">Título da fatura</Label>
+                <Input value={cardTitle} onChange={e => setCardTitle(e.target.value)} placeholder="Ex: Nubank Dez/2025" />
+              </div>
+              <div>
+                <Label className="text-xs">Vencimento da fatura</Label>
+                <Input type="date" value={cardDueDate} onChange={e => setCardDueDate(e.target.value)} />
+              </div>
+            </div>
             <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
-                Arquivo: <span className="text-foreground">{fileName}</span> • {rows.filter(r => r.selected).length}/{rows.length} selecionados • Total: <span className="text-foreground font-semibold">{fmt(selectedTotals.total)}</span>
+                Arquivo: <span className="text-foreground">{fileName}</span> • {rows.filter(r => r.selected).length}/{rows.length} itens • Total: <span className="text-foreground font-semibold">{fmt(selectedTotals.total)}</span>
               </div>
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" onClick={() => setRows(rs => rs.map(r => ({ ...r, selected: true })))}>Marcar todos</Button>
