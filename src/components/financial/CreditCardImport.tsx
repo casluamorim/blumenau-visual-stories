@@ -160,13 +160,15 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [fileName, setFileName] = useState('');
+  const [cardTitle, setCardTitle] = useState('');
+  const [cardDueDate, setCardDueDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [importing, setImporting] = useState(false);
   const [importedSummary, setImportedSummary] = useState<Record<string, number> | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
   function reset() {
-    setRows([]); setFileName(''); setImportedSummary(null);
+    setRows([]); setFileName(''); setImportedSummary(null); setCardTitle('');
   }
 
   function handleFile(f: File) {
