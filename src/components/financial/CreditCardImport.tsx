@@ -26,6 +26,7 @@ interface ParsedRow {
 }
 
 export const CC_CATEGORIES = [
+  'Cartão de Crédito',
   'Alimentação', 'Mercado', 'Restaurante', 'Delivery',
   'Transporte', 'Gasolina', 'Estacionamento', 'Pedágio', 'Manutenção Veículo',
   'Viagem', 'Hospedagem', 'Passagem Aérea',
@@ -159,13 +160,15 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [fileName, setFileName] = useState('');
+  const [cardTitle, setCardTitle] = useState('');
+  const [cardDueDate, setCardDueDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [importing, setImporting] = useState(false);
   const [importedSummary, setImportedSummary] = useState<Record<string, number> | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
   function reset() {
-    setRows([]); setFileName(''); setImportedSummary(null);
+    setRows([]); setFileName(''); setImportedSummary(null); setCardTitle('');
   }
 
   function handleFile(f: File) {
@@ -250,7 +253,28 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
   async function importAll() {
     const toInsert = rows.filter(r => r.selected);
     if (!toInsert.length) { toast({ title: 'Selecione ao menos um lançamento' }); return; }
+    const title = cardTitle.trim() || (fileName ? `Cartão — ${fileName.replace(/\.[^.]+$/, '')}` : 'Cartão de Crédito');
+    if (!cardDueDate) { toast({ title: 'Informe o vencimento da fatura', variant: 'destructive' }); return; }
     setImporting(true);
+    const total = toInsert.reduce((a, r) => a + r.amount, 0);
+    // 1) Create parent card expense
+    const { data: parent, error: pErr } = await (supabase.from('expenses') as any).insert({
+      description: title,
+      amount: total,
+      category: 'Cartão de Crédito',
+      due_date: cardDueDate,
+      status: 'pending',
+      financial_type: financialType,
+      recurrence: 'one_time',
+      notes: `[Fatura de Cartão]${fileName ? ` Importado de ${fileName}` : ''} • ${toInsert.length} itens`,
+      created_by: user?.id,
+    }).select('id').single();
+    if (pErr || !parent) {
+      setImporting(false);
+      toast({ title: 'Erro ao criar fatura', description: pErr?.message, variant: 'destructive' });
+      return;
+    }
+    // 2) Insert children linked to parent
     const payload = toInsert.map(r => ({
       description: r.description,
       amount: r.amount,
@@ -259,13 +283,14 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
       status: 'paid' as any,
       financial_type: financialType as any,
       recurrence: 'one_time' as any,
-      notes: `[Cartão de Crédito]${fileName ? ` Importado de ${fileName}` : ''}`,
+      parent_expense_id: parent.id,
+      notes: `[Item de fatura]`,
       created_by: user?.id,
     }));
     const { error } = await supabase.from('expenses').insert(payload as any);
     setImporting(false);
-    if (error) { toast({ title: 'Erro ao importar', description: error.message, variant: 'destructive' }); return; }
-    toast({ title: `${toInsert.length} despesa(s) importada(s)!` });
+    if (error) { toast({ title: 'Erro ao importar itens', description: error.message, variant: 'destructive' }); return; }
+    toast({ title: `Fatura criada com ${toInsert.length} item(ns)!` });
     setImportedSummary(selectedTotals.map);
     setRows([]);
     onImported();
@@ -301,7 +326,11 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
                 type="file" accept=".csv,text/csv"
                 onChange={e => {
                   const f = e.target.files?.[0];
-                  if (f) { setFileName(f.name); handleFile(f); }
+                  if (f) {
+                    setFileName(f.name);
+                    if (!cardTitle) setCardTitle(`Cartão — ${f.name.replace(/\.[^.]+$/, '')}`);
+                    handleFile(f);
+                  }
                 }}
                 className="max-w-xs mx-auto"
               />
@@ -311,9 +340,19 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
 
         {rows.length > 0 && (
           <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 rounded-lg border border-border p-3 bg-muted/20">
+              <div>
+                <Label className="text-xs">Título da fatura</Label>
+                <Input value={cardTitle} onChange={e => setCardTitle(e.target.value)} placeholder="Ex: Nubank Dez/2025" />
+              </div>
+              <div>
+                <Label className="text-xs">Vencimento da fatura</Label>
+                <Input type="date" value={cardDueDate} onChange={e => setCardDueDate(e.target.value)} />
+              </div>
+            </div>
             <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
-                Arquivo: <span className="text-foreground">{fileName}</span> • {rows.filter(r => r.selected).length}/{rows.length} selecionados • Total: <span className="text-foreground font-semibold">{fmt(selectedTotals.total)}</span>
+                Arquivo: <span className="text-foreground">{fileName}</span> • {rows.filter(r => r.selected).length}/{rows.length} itens • Total: <span className="text-foreground font-semibold">{fmt(selectedTotals.total)}</span>
               </div>
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" onClick={() => setRows(rs => rs.map(r => ({ ...r, selected: true })))}>Marcar todos</Button>
@@ -372,7 +411,7 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={reset}>Cancelar</Button>
               <Button onClick={importAll} disabled={importing}>
-                {importing ? 'Importando...' : `Importar ${rows.filter(r => r.selected).length} despesa(s)`}
+                {importing ? 'Criando fatura...' : `Criar fatura com ${rows.filter(r => r.selected).length} item(ns)`}
               </Button>
             </div>
           </div>

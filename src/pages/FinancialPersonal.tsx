@@ -15,12 +15,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Plus, Trash2, Edit, CheckCircle, Clock, AlertTriangle, TrendingUp, TrendingDown,
-  DollarSign, RefreshCw, Search, Paperclip, Sparkles
+  DollarSign, RefreshCw, Search, Paperclip, Sparkles, Eye
 } from 'lucide-react';
 import { MonthNavigator } from '@/components/financial/MonthNavigator';
 import { InlineEdit } from '@/components/InlineEdit';
 import { CreditCardImport } from '@/components/financial/CreditCardImport';
 import { InlineCategorySelect } from '@/components/financial/InlineCategorySelect';
+import { CardExpenseDialog } from '@/components/financial/CardExpenseDialog';
 import {
   expandOccurrencesForMonth, expandOccurrencesForMonths, monthLabel, Occurrence,
 } from '@/lib/financialMonthly';
@@ -57,6 +58,7 @@ export default function FinancialPersonal() {
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
   const [editingIncome, setEditingIncome] = useState<PFIncome | null>(null);
   const [editingExpense, setEditingExpense] = useState<PFExpense | null>(null);
+  const [cardDialog, setCardDialog] = useState<{ open: boolean; parentId?: string; parentTitle?: string }>({ open: false });
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -111,17 +113,42 @@ export default function FinancialPersonal() {
     () => expandOccurrencesForMonth(incomes as any[], selectedMonth),
     [incomes, selectedMonth]
   );
+  const cardParentIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const e of expenses as any[]) {
+      if (e.category === 'Cartão de Crédito' && !e.parent_expense_id) s.add(e.id);
+    }
+    return s;
+  }, [expenses]);
+
+  const childrenByCard = useMemo(() => {
+    const m = new Map<string, any[]>();
+    for (const e of expenses as any[]) {
+      if (e.parent_expense_id && cardParentIds.has(e.parent_expense_id)) {
+        const arr = m.get(e.parent_expense_id) ?? [];
+        arr.push(e); m.set(e.parent_expense_id, arr);
+      }
+    }
+    for (const arr of m.values()) arr.sort((a, b) => (a.due_date > b.due_date ? -1 : 1));
+    return m;
+  }, [expenses, cardParentIds]);
+
+  const expensesForList = useMemo(
+    () => (expenses as any[]).filter(e => !(e.parent_expense_id && cardParentIds.has(e.parent_expense_id))),
+    [expenses, cardParentIds]
+  );
+
   const monthExpenseOccs = useMemo(
-    () => expandOccurrencesForMonth(expenses as any[], selectedMonth),
-    [expenses, selectedMonth]
+    () => expandOccurrencesForMonth(expensesForList, selectedMonth),
+    [expensesForList, selectedMonth]
   );
   const incomeOccs = useMemo(
     () => expandOccurrencesForMonths(incomes as any[], selectedMonth, monthsToShow),
     [incomes, selectedMonth, monthsToShow]
   );
   const expenseOccs = useMemo(
-    () => expandOccurrencesForMonths(expenses as any[], selectedMonth, monthsToShow),
-    [expenses, selectedMonth, monthsToShow]
+    () => expandOccurrencesForMonths(expensesForList, selectedMonth, monthsToShow),
+    [expensesForList, selectedMonth, monthsToShow]
   );
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -331,6 +358,12 @@ export default function FinancialPersonal() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
+                          {!isIncome && cardParentIds.has(r.id) && (
+                            <Button variant="ghost" size="icon" title="Ver itens da fatura"
+                              onClick={() => setCardDialog({ open: true, parentId: r.id, parentTitle: r.description })}>
+                              <Eye className="h-4 w-4 text-primary" />
+                            </Button>
+                          )}
                           {resolveStatus(occ) !== 'paid' && (
                             <Button variant="ghost" size="icon" title="Marcar como pago"
                               onClick={() => {
@@ -536,6 +569,17 @@ export default function FinancialPersonal() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {cardDialog.parentId && (
+        <CardExpenseDialog
+          open={cardDialog.open}
+          onOpenChange={(o) => setCardDialog(s => ({ ...s, open: o }))}
+          parentId={cardDialog.parentId}
+          parentTitle={cardDialog.parentTitle ?? 'Fatura de Cartão'}
+          children={childrenByCard.get(cardDialog.parentId) ?? []}
+          onChanged={loadData}
+        />
+      )}
     </AppLayout>
   );
 }
