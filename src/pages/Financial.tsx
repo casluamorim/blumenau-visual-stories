@@ -849,6 +849,12 @@ export default function Financial() {
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-1">
+                                {cardParentIds.has(exp.id) && (
+                                  <Button variant="ghost" size="icon" title="Ver itens da fatura"
+                                    onClick={() => setCardDialog({ open: true, parentId: exp.id, parentTitle: exp.description })}>
+                                    <Eye className="h-4 w-4 text-primary" />
+                                  </Button>
+                                )}
                                 {resolveStatus(occ) !== 'paid' && (
                                   <Button variant="ghost" size="icon" title="Marcar como pago"
                                     onClick={() => occ.virtual ? materializeExpensePaid(occ) : markExpensePaid(exp)}>
