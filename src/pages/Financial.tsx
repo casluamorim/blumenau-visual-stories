@@ -16,7 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 import {
   Plus, DollarSign, FileText, Receipt, Trash2, Edit, AlertTriangle,
   CheckCircle, Clock, XCircle, TrendingUp, TrendingDown, Search,
-  MessageCircle, RefreshCw, Paperclip, Sparkles
+  MessageCircle, RefreshCw, Paperclip, Sparkles, CreditCard, Eye
 } from 'lucide-react';
 import { MonthNavigator } from '@/components/financial/MonthNavigator';
 import { InlineEdit } from '@/components/InlineEdit';
