@@ -158,6 +158,7 @@ export default function Financial() {
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [cardDialog, setCardDialog] = useState<{ open: boolean; parentId?: string; parentTitle?: string }>({ open: false });
   const { toast } = useToast();
   const { user } = useAuth();
 
