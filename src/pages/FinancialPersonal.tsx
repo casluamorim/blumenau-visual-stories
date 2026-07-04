@@ -113,17 +113,42 @@ export default function FinancialPersonal() {
     () => expandOccurrencesForMonth(incomes as any[], selectedMonth),
     [incomes, selectedMonth]
   );
+  const cardParentIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const e of expenses as any[]) {
+      if (e.category === 'Cartão de Crédito' && !e.parent_expense_id) s.add(e.id);
+    }
+    return s;
+  }, [expenses]);
+
+  const childrenByCard = useMemo(() => {
+    const m = new Map<string, any[]>();
+    for (const e of expenses as any[]) {
+      if (e.parent_expense_id && cardParentIds.has(e.parent_expense_id)) {
+        const arr = m.get(e.parent_expense_id) ?? [];
+        arr.push(e); m.set(e.parent_expense_id, arr);
+      }
+    }
+    for (const arr of m.values()) arr.sort((a, b) => (a.due_date > b.due_date ? -1 : 1));
+    return m;
+  }, [expenses, cardParentIds]);
+
+  const expensesForList = useMemo(
+    () => (expenses as any[]).filter(e => !(e.parent_expense_id && cardParentIds.has(e.parent_expense_id))),
+    [expenses, cardParentIds]
+  );
+
   const monthExpenseOccs = useMemo(
-    () => expandOccurrencesForMonth(expenses as any[], selectedMonth),
-    [expenses, selectedMonth]
+    () => expandOccurrencesForMonth(expensesForList, selectedMonth),
+    [expensesForList, selectedMonth]
   );
   const incomeOccs = useMemo(
     () => expandOccurrencesForMonths(incomes as any[], selectedMonth, monthsToShow),
     [incomes, selectedMonth, monthsToShow]
   );
   const expenseOccs = useMemo(
-    () => expandOccurrencesForMonths(expenses as any[], selectedMonth, monthsToShow),
-    [expenses, selectedMonth, monthsToShow]
+    () => expandOccurrencesForMonths(expensesForList, selectedMonth, monthsToShow),
+    [expensesForList, selectedMonth, monthsToShow]
   );
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
