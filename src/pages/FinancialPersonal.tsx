@@ -358,6 +358,12 @@ export default function FinancialPersonal() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
+                          {!isIncome && cardParentIds.has(r.id) && (
+                            <Button variant="ghost" size="icon" title="Ver itens da fatura"
+                              onClick={() => setCardDialog({ open: true, parentId: r.id, parentTitle: r.description })}>
+                              <Eye className="h-4 w-4 text-primary" />
+                            </Button>
+                          )}
                           {resolveStatus(occ) !== 'paid' && (
                             <Button variant="ghost" size="icon" title="Marcar como pago"
                               onClick={() => {
