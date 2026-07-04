@@ -1242,6 +1242,17 @@ export default function Financial() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {cardDialog.parentId && (
+        <CardExpenseDialog
+          open={cardDialog.open}
+          onOpenChange={(o) => setCardDialog(s => ({ ...s, open: o }))}
+          parentId={cardDialog.parentId}
+          parentTitle={cardDialog.parentTitle ?? 'Fatura de Cartão'}
+          children={childrenByCard.get(cardDialog.parentId) ?? []}
+          onChanged={loadData}
+        />
+      )}
     </AppLayout>
   );
 }
