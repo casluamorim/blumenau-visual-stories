@@ -253,7 +253,28 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
   async function importAll() {
     const toInsert = rows.filter(r => r.selected);
     if (!toInsert.length) { toast({ title: 'Selecione ao menos um lançamento' }); return; }
+    const title = cardTitle.trim() || (fileName ? `Cartão — ${fileName.replace(/\.[^.]+$/, '')}` : 'Cartão de Crédito');
+    if (!cardDueDate) { toast({ title: 'Informe o vencimento da fatura', variant: 'destructive' }); return; }
     setImporting(true);
+    const total = toInsert.reduce((a, r) => a + r.amount, 0);
+    // 1) Create parent card expense
+    const { data: parent, error: pErr } = await (supabase.from('expenses') as any).insert({
+      description: title,
+      amount: total,
+      category: 'Cartão de Crédito',
+      due_date: cardDueDate,
+      status: 'pending',
+      financial_type: financialType,
+      recurrence: 'one_time',
+      notes: `[Fatura de Cartão]${fileName ? ` Importado de ${fileName}` : ''} • ${toInsert.length} itens`,
+      created_by: user?.id,
+    }).select('id').single();
+    if (pErr || !parent) {
+      setImporting(false);
+      toast({ title: 'Erro ao criar fatura', description: pErr?.message, variant: 'destructive' });
+      return;
+    }
+    // 2) Insert children linked to parent
     const payload = toInsert.map(r => ({
       description: r.description,
       amount: r.amount,
@@ -262,13 +283,14 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
       status: 'paid' as any,
       financial_type: financialType as any,
       recurrence: 'one_time' as any,
-      notes: `[Cartão de Crédito]${fileName ? ` Importado de ${fileName}` : ''}`,
+      parent_expense_id: parent.id,
+      notes: `[Item de fatura]`,
       created_by: user?.id,
     }));
     const { error } = await supabase.from('expenses').insert(payload as any);
     setImporting(false);
-    if (error) { toast({ title: 'Erro ao importar', description: error.message, variant: 'destructive' }); return; }
-    toast({ title: `${toInsert.length} despesa(s) importada(s)!` });
+    if (error) { toast({ title: 'Erro ao importar itens', description: error.message, variant: 'destructive' }); return; }
+    toast({ title: `Fatura criada com ${toInsert.length} item(ns)!` });
     setImportedSummary(selectedTotals.map);
     setRows([]);
     onImported();
