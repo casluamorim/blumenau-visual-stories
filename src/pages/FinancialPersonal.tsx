@@ -15,12 +15,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Plus, Trash2, Edit, CheckCircle, Clock, AlertTriangle, TrendingUp, TrendingDown,
-  DollarSign, RefreshCw, Search, Paperclip, Sparkles
+  DollarSign, RefreshCw, Search, Paperclip, Sparkles, Eye
 } from 'lucide-react';
 import { MonthNavigator } from '@/components/financial/MonthNavigator';
 import { InlineEdit } from '@/components/InlineEdit';
 import { CreditCardImport } from '@/components/financial/CreditCardImport';
 import { InlineCategorySelect } from '@/components/financial/InlineCategorySelect';
+import { CardExpenseDialog } from '@/components/financial/CardExpenseDialog';
 import {
   expandOccurrencesForMonth, expandOccurrencesForMonths, monthLabel, Occurrence,
 } from '@/lib/financialMonthly';
