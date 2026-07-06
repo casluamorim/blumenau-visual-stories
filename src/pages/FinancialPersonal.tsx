@@ -253,7 +253,7 @@ export default function FinancialPersonal() {
     let attachmentUrl = editingExpense?.attachment_url ?? null;
     if (eAttachment) {
       setUploading(true);
-      const path = `expenses-pf/${Date.now()}.${eAttachment.name.split('.').pop()}`;
+      const path = `expenses-pf/${user?.id}/${Date.now()}.${eAttachment.name.split('.').pop()}`;
       const { error } = await supabase.storage.from('content-files').upload(path, eAttachment);
       if (error) { toast({ title: 'Erro no upload', variant: 'destructive' }); setUploading(false); return; }
       attachmentUrl = supabase.storage.from('content-files').getPublicUrl(path).data.publicUrl;
