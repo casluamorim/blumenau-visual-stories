@@ -256,25 +256,54 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
     const title = cardTitle.trim() || (fileName ? `Cartão — ${fileName.replace(/\.[^.]+$/, '')}` : 'Cartão de Crédito');
     if (!cardDueDate) { toast({ title: 'Informe o vencimento da fatura', variant: 'destructive' }); return; }
     setImporting(true);
-    const total = toInsert.reduce((a, r) => a + r.amount, 0);
-    // 1) Create parent card expense
-    const { data: parent, error: pErr } = await (supabase.from('expenses') as any).insert({
-      description: title,
-      amount: total,
-      category: 'Cartão de Crédito',
-      due_date: cardDueDate,
-      status: 'pending',
-      financial_type: financialType,
-      recurrence: 'one_time',
-      notes: `[Fatura de Cartão]${fileName ? ` Importado de ${fileName}` : ''} • ${toInsert.length} itens`,
-      created_by: user?.id,
-    }).select('id').single();
-    if (pErr || !parent) {
-      setImporting(false);
-      toast({ title: 'Erro ao criar fatura', description: pErr?.message, variant: 'destructive' });
-      return;
+
+    // Duplicate guard: look for existing parent invoice in same month/type/title
+    const monthStart = cardDueDate.slice(0, 7) + '-01';
+    const [yy, mm] = cardDueDate.slice(0, 7).split('-').map(Number);
+    const nextMonth = new Date(yy, mm, 1); // mm is 1-based → next month
+    const monthEnd = nextMonth.toISOString().slice(0, 10);
+
+    const { data: existing } = await (supabase.from('expenses') as any)
+      .select('id, description, due_date')
+      .eq('category', 'Cartão de Crédito')
+      .is('parent_expense_id', null)
+      .eq('financial_type', financialType)
+      .eq('description', title)
+      .gte('due_date', monthStart)
+      .lt('due_date', monthEnd)
+      .limit(1);
+
+    let parentId: string | null = (existing as any[])?.[0]?.id ?? null;
+    let merged = false;
+
+    if (parentId) {
+      const ok = window.confirm(
+        `Já existe uma fatura "${title}" neste mês. Deseja adicionar os ${toInsert.length} novo(s) item(ns) à fatura existente?`
+      );
+      if (!ok) { setImporting(false); return; }
+      merged = true;
+    } else {
+      const total = toInsert.reduce((a, r) => a + r.amount, 0);
+      const { data: parent, error: pErr } = await (supabase.from('expenses') as any).insert({
+        description: title,
+        amount: total,
+        category: 'Cartão de Crédito',
+        due_date: cardDueDate,
+        status: 'pending',
+        financial_type: financialType,
+        recurrence: 'one_time',
+        notes: `[Fatura de Cartão]${fileName ? ` Importado de ${fileName}` : ''} • ${toInsert.length} itens`,
+        created_by: user?.id,
+      }).select('id').single();
+      if (pErr || !parent) {
+        setImporting(false);
+        toast({ title: 'Erro ao criar fatura', description: pErr?.message, variant: 'destructive' });
+        return;
+      }
+      parentId = parent.id;
     }
-    // 2) Insert children linked to parent
+
+    // Insert children linked to the (existing or new) parent
     const payload = toInsert.map(r => ({
       description: r.description,
       amount: r.amount,
@@ -283,14 +312,25 @@ export function CreditCardImport({ onImported, financialType = 'pj' }: Props) {
       status: 'paid' as any,
       financial_type: financialType as any,
       recurrence: 'one_time' as any,
-      parent_expense_id: parent.id,
+      parent_expense_id: parentId,
       notes: `[Item de fatura]`,
       created_by: user?.id,
     }));
     const { error } = await supabase.from('expenses').insert(payload as any);
+    if (error) {
+      setImporting(false);
+      toast({ title: 'Erro ao importar itens', description: error.message, variant: 'destructive' });
+      return;
+    }
+
+    // Recompute parent total from all children (works for both new and merged)
+    const { data: allChildren } = await supabase.from('expenses')
+      .select('amount').eq('parent_expense_id', parentId!);
+    const newTotal = (allChildren as any[] ?? []).reduce((a, r) => a + Number(r.amount || 0), 0);
+    await (supabase.from('expenses') as any).update({ amount: newTotal }).eq('id', parentId!);
+
     setImporting(false);
-    if (error) { toast({ title: 'Erro ao importar itens', description: error.message, variant: 'destructive' }); return; }
-    toast({ title: `Fatura criada com ${toInsert.length} item(ns)!` });
+    toast({ title: merged ? `Itens adicionados à fatura existente!` : `Fatura criada com ${toInsert.length} item(ns)!` });
     setImportedSummary(selectedTotals.map);
     setRows([]);
     onImported();
