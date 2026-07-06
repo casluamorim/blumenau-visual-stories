@@ -389,7 +389,7 @@ export default function Financial() {
     if (eAttachment) {
       setUploading(true);
       const ext = eAttachment.name.split('.').pop();
-      const path = `expenses/${Date.now()}.${ext}`;
+      const path = `expenses/${user?.id}/${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage.from('content-files').upload(path, eAttachment);
       if (upErr) { toast({ title: 'Erro no upload', variant: 'destructive' }); setUploading(false); return; }
       const { data: urlData } = supabase.storage.from('content-files').getPublicUrl(path);
