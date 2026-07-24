@@ -528,6 +528,12 @@ export default function Dashboard() {
           </Card>
         </section>
 
+        {/* Atividade dos clientes (aprovações, pedidos de alteração, comentários) */}
+        <section>
+          <ClientNotificationsCard />
+        </section>
+
+
         {/* Charts: cashflow + top clients */}
         <section className="grid gap-6 lg:grid-cols-3">
           <Card className="card-premium lg:col-span-2">
