@@ -21,6 +21,7 @@ import {
 import { format, subDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addDays, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { expandOccurrencesForMonth } from '@/lib/financialMonthly';
+import { ClientNotificationsCard } from '@/components/dashboard/ClientNotificationsCard';
 
 
 type Period = '7d' | '30d' | 'month' | 'quarter' | 'year';
