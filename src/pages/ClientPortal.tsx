@@ -181,6 +181,35 @@ export default function ClientPortal() {
     setLoading(false);
   }
 
+  async function notifyTeam(params: {
+    contentId: string;
+    kind: 'approved' | 'change_requested' | 'comment';
+    part: 'media' | 'copy' | 'general';
+    message?: string;
+    authorName?: string;
+  }) {
+    const c = projects.flatMap(p => p.contents).find(c => c.id === params.contentId);
+    const partLabel = params.part === 'media' ? 'mídia' : params.part === 'copy' ? 'copy' : 'geral';
+    const titleMap = {
+      approved: `Cliente aprovou ${partLabel}`,
+      change_requested: `Cliente pediu alteração (${partLabel})`,
+      comment: `Novo comentário do cliente`,
+    } as const;
+    const title = `${titleMap[params.kind]}${c?.title ? ` — ${c.title}` : ''}`;
+    try {
+      await supabase.from('client_notifications').insert({
+        client_id: client?.id ?? null,
+        content_id: params.contentId,
+        kind: params.kind,
+        title,
+        message: params.message ?? null,
+        author_name: params.authorName ?? 'Cliente',
+      });
+    } catch (e) {
+      console.warn('[notify] failed', e);
+    }
+  }
+
   async function approvePart(contentId: string, part: 'media' | 'copy') {
     const patch: any = part === 'media' ? { media_status: 'approved' } : { copy_status: 'approved' };
     const { error } = await supabase.from('contents').update(patch).eq('id', contentId);
@@ -193,6 +222,7 @@ export default function ClientPortal() {
     if (newMedia === 'approved' && (!hasCopy || newCopy === 'approved')) {
       await supabase.from('contents').update({ status: 'approved' as any }).eq('id', contentId);
     }
+    await notifyTeam({ contentId, kind: 'approved', part });
     toast({ title: part === 'media' ? '✅ Mídia aprovada!' : '✅ Copy aprovada!' });
     loadPortalData();
   }
@@ -214,6 +244,13 @@ export default function ClientPortal() {
       const patch: any = part === 'media' ? { media_status: 'change_requested' } : { copy_status: 'change_requested' };
       await supabase.from('contents').update({ ...patch, status: 'revision' as any }).eq('id', contentId);
     }
+    await notifyTeam({
+      contentId,
+      kind: part === 'general' ? 'comment' : 'change_requested',
+      part,
+      message: text.trim(),
+      authorName: authorName.trim() || 'Cliente',
+    });
     toast({ title: '📝 Comentário enviado!' });
     loadPortalData();
   }
