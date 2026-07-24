@@ -192,6 +192,57 @@ export type Database = {
           },
         ]
       }
+      client_notifications: {
+        Row: {
+          author_name: string | null
+          client_id: string | null
+          content_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          message: string | null
+          read_at: string | null
+          title: string
+        }
+        Insert: {
+          author_name?: string | null
+          client_id?: string | null
+          content_id?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          message?: string | null
+          read_at?: string | null
+          title: string
+        }
+        Update: {
+          author_name?: string | null
+          client_id?: string | null
+          content_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          message?: string | null
+          read_at?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_notifications_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_tags: {
         Row: {
           client_id: string

@@ -21,6 +21,7 @@ import {
 import { format, subDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addDays, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { expandOccurrencesForMonth } from '@/lib/financialMonthly';
+import { ClientNotificationsCard } from '@/components/dashboard/ClientNotificationsCard';
 
 
 type Period = '7d' | '30d' | 'month' | 'quarter' | 'year';
@@ -527,6 +528,12 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </section>
+
+        {/* Atividade dos clientes (aprovações, pedidos de alteração, comentários) */}
+        <section>
+          <ClientNotificationsCard />
+        </section>
+
 
         {/* Charts: cashflow + top clients */}
         <section className="grid gap-6 lg:grid-cols-3">
