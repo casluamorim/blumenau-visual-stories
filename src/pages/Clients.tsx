@@ -10,13 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Search, Mail, Phone, Building2, MoreHorizontal, Edit, Trash2, Link2, Copy, Check, ArrowRight, ChevronLeft, ChevronRight, MessageCircle, KeyRound } from 'lucide-react';
+import { Plus, Search, Mail, Phone, Building2, MoreHorizontal, Edit, Trash2, Link2, Copy, Check, ArrowRight, ChevronLeft, ChevronRight, MessageCircle, KeyRound, CreditCard } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import type { Database } from '@/integrations/supabase/types';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { buildPortalUrl } from '@/lib/portal';
+import { ClientBillingDialog } from '@/components/financial/ClientBillingDialog';
 
 type Client = Database['public']['Tables']['clients']['Row'];
 type ClientInsert = Database['public']['Tables']['clients']['Insert'];
@@ -36,6 +37,7 @@ export default function Clients() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [accessDialog, setAccessDialog] = useState<{ open: boolean; client: Client | null; email: string; loading: boolean; link: string | null }>({ open: false, client: null, email: '', loading: false, link: null });
   const [accessLinkCopied, setAccessLinkCopied] = useState(false);
+  const [billingDialog, setBillingDialog] = useState<{ open: boolean; client: Client | null }>({ open: false, client: null });
 
   const [form, setForm] = useState<ClientInsert>({
     name: '', company: '', email: '', phone: '', status: 'active', notes: '',
@@ -345,6 +347,9 @@ export default function Clients() {
                     <DropdownMenuItem onClick={() => openAccessDialog(client)}>
                       <KeyRound className="mr-2 h-4 w-4 text-primary" /> Acesso por senha
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setBillingDialog({ open: true, client })}>
+                      <CreditCard className="mr-2 h-4 w-4 text-primary" /> Cobrança automática
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => openEdit(client)}><Edit className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleDelete(client.id)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
                   </DropdownMenuContent>
@@ -353,8 +358,17 @@ export default function Clients() {
               <CardContent className="space-y-2">
                 {client.email && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="h-3 w-3" />{client.email}</p>}
                 {client.phone && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Phone className="h-3 w-3" />{client.phone}</p>}
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge className={statusColors[client.status] ?? ''} variant="outline">{statusLabels[client.status] ?? client.status}</Badge>
+                  {client.billing_enabled && (
+                    <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+                      <CreditCard className="mr-1 h-3 w-3" />
+                      {client.billing_amount
+                        ? `${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(client.billing_amount))}/mês`
+                        : 'Cobrança ativa'}
+                      {client.billing_due_day ? ` · dia ${client.billing_due_day}` : ''}
+                    </Badge>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
@@ -365,7 +379,17 @@ export default function Clients() {
                     {copiedId === client.id ? <Check className="h-3 w-3 text-emerald-500" /> : <Link2 className="h-3 w-3" />}
                     {copiedId === client.id ? 'Copiado' : 'Copiar link'}
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 gap-1 px-2 text-xs"
+                    onClick={(e) => { e.preventDefault(); setBillingDialog({ open: true, client }); }}
+                    title="Configurar cobrança automática"
+                  >
+                    <CreditCard className="h-3 w-3" /> Cobrança
+                  </Button>
                 </div>
+
               </CardContent>
             </Card>
           ))}
@@ -469,6 +493,14 @@ export default function Clients() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Asaas billing dialog */}
+        <ClientBillingDialog
+          open={billingDialog.open}
+          client={billingDialog.client}
+          onOpenChange={(o) => setBillingDialog(s => ({ ...s, open: o }))}
+          onSaved={refresh}
+        />
       </div>
     </AppLayout>
   );
