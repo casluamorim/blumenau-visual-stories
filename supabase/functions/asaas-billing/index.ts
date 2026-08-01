@@ -174,7 +174,10 @@ Deno.serve(async (req) => {
 
   // run_recurring pode ser chamado pelo cron (service role) ou por um admin logado
   const authHeader = req.headers.get("Authorization") ?? "";
-  const isServiceRole = authHeader.includes(SERVICE_ROLE_KEY);
+  const CRON_KEY = Deno.env.get("ASAAS_CRON_KEY") ?? "";
+  const cronKey = req.headers.get("x-cron-key") ?? "";
+  const isServiceRole = authHeader.includes(SERVICE_ROLE_KEY) ||
+    (!!CRON_KEY && cronKey === CRON_KEY);
   let userId: string | null = null;
 
   if (!isServiceRole) {
