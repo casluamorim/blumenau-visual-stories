@@ -493,6 +493,14 @@ export default function Clients() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Asaas billing dialog */}
+        <ClientBillingDialog
+          open={billingDialog.open}
+          client={billingDialog.client}
+          onOpenChange={(o) => setBillingDialog(s => ({ ...s, open: o }))}
+          onSaved={refresh}
+        />
       </div>
     </AppLayout>
   );
