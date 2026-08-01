@@ -116,6 +116,84 @@ export type Database = {
         }
         Relationships: []
       }
+      asaas_charges: {
+        Row: {
+          amount: number
+          asaas_payment_id: string
+          billing_type: string
+          client_id: string
+          competence_month: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string
+          id: string
+          invoice_id: string | null
+          invoice_url: string | null
+          is_recurring: boolean
+          paid_at: string | null
+          pix_payload: string | null
+          pix_qr_code: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          asaas_payment_id: string
+          billing_type?: string
+          client_id: string
+          competence_month?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date: string
+          id?: string
+          invoice_id?: string | null
+          invoice_url?: string | null
+          is_recurring?: boolean
+          paid_at?: string | null
+          pix_payload?: string | null
+          pix_qr_code?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          asaas_payment_id?: string
+          billing_type?: string
+          client_id?: string
+          competence_month?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string
+          id?: string
+          invoice_id?: string | null
+          invoice_url?: string | null
+          is_recurring?: boolean
+          paid_at?: string | null
+          pix_payload?: string | null
+          pix_qr_code?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asaas_charges_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asaas_charges_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_access_tokens: {
         Row: {
           client_id: string
@@ -275,8 +353,16 @@ export type Database = {
       }
       clients: {
         Row: {
+          asaas_customer_id: string | null
           auth_user_id: string | null
           avg_response_time: string | null
+          billing_amount: number | null
+          billing_cpf_cnpj: string | null
+          billing_description: string | null
+          billing_due_day: number | null
+          billing_enabled: boolean
+          billing_last_generated_month: string | null
+          billing_type: string
           company: string | null
           created_at: string
           created_by: string | null
@@ -294,8 +380,16 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          asaas_customer_id?: string | null
           auth_user_id?: string | null
           avg_response_time?: string | null
+          billing_amount?: number | null
+          billing_cpf_cnpj?: string | null
+          billing_description?: string | null
+          billing_due_day?: number | null
+          billing_enabled?: boolean
+          billing_last_generated_month?: string | null
+          billing_type?: string
           company?: string | null
           created_at?: string
           created_by?: string | null
@@ -313,8 +407,16 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          asaas_customer_id?: string | null
           auth_user_id?: string | null
           avg_response_time?: string | null
+          billing_amount?: number | null
+          billing_cpf_cnpj?: string | null
+          billing_description?: string | null
+          billing_due_day?: number | null
+          billing_enabled?: boolean
+          billing_last_generated_month?: string | null
+          billing_type?: string
           company?: string | null
           created_at?: string
           created_by?: string | null
