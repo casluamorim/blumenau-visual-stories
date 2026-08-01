@@ -37,6 +37,7 @@ export default function Clients() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [accessDialog, setAccessDialog] = useState<{ open: boolean; client: Client | null; email: string; loading: boolean; link: string | null }>({ open: false, client: null, email: '', loading: false, link: null });
   const [accessLinkCopied, setAccessLinkCopied] = useState(false);
+  const [billingDialog, setBillingDialog] = useState<{ open: boolean; client: Client | null }>({ open: false, client: null });
 
   const [form, setForm] = useState<ClientInsert>({
     name: '', company: '', email: '', phone: '', status: 'active', notes: '',
