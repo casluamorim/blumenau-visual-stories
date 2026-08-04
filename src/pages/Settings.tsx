@@ -61,6 +61,9 @@ export default function Settings() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [asaasSetup, setAsaasSetup] = useState(false);
+  const [asaasWebhook, setAsaasWebhook] = useState<{ id?: string; url?: string; events?: string[] } | null>(null);
+
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
