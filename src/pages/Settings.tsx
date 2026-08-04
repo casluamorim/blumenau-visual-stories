@@ -65,6 +65,25 @@ export default function Settings() {
   const [asaasWebhook, setAsaasWebhook] = useState<{ id?: string; url?: string; events?: string[] } | null>(null);
 
   const [savingProfile, setSavingProfile] = useState(false);
+
+  async function setupAsaasWebhook() {
+    setAsaasSetup(true);
+    const { data, error } = await supabase.functions.invoke('asaas-billing', {
+      body: { action: 'setup_webhook' },
+    });
+    setAsaasSetup(false);
+    if (error || (data as any)?.error) {
+      toast({
+        title: 'Erro ao cadastrar webhook',
+        description: (data as any)?.error ?? error?.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+    setAsaasWebhook((data as any)?.webhook ?? null);
+    toast({ title: 'Webhook do Asaas cadastrado!', description: 'Pagamentos agora atualizam as faturas automaticamente.' });
+  }
+
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [showPix, setShowPix] = useState(false);
