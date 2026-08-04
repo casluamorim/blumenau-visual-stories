@@ -23,6 +23,7 @@ import { InlineEdit } from '@/components/InlineEdit';
 import { CreditCardImport } from '@/components/financial/CreditCardImport';
 import { InlineCategorySelect } from '@/components/financial/InlineCategorySelect';
 import { CardExpenseDialog } from '@/components/financial/CardExpenseDialog';
+import { ClientCombobox } from '@/components/clients/ClientCombobox';
 import {
   expandOccurrencesForMonth,
   expandOccurrencesForMonths,
@@ -606,6 +607,8 @@ export default function Financial() {
               <p className="text-xs text-muted-foreground mt-1">Receita - despesa do mês</p>
             </CardContent>
           </Card>
+        </div>
+
 
         {/* Tabs */}
         <Tabs defaultValue="invoices" className="space-y-4">
