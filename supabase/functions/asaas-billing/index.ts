@@ -287,7 +287,45 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    // Cadastra (ou atualiza) o webhook de cobranças no Asaas apontando
+    // para a função asaas-webhook, com token de autenticação próprio.
+    if (action === "setup_webhook") {
+      const url = String(body.url ?? `${SUPABASE_URL}/functions/v1/asaas-webhook`);
+      const email = String(body.email ?? "financeiro@agenciaracun.com");
+      const authToken = Deno.env.get("ASAAS_WEBHOOK_TOKEN") ?? "";
+      const events = [
+        "PAYMENT_CREATED",
+        "PAYMENT_RECEIVED",
+        "PAYMENT_CONFIRMED",
+        "PAYMENT_RECEIVED_IN_CASH",
+        "PAYMENT_OVERDUE",
+        "PAYMENT_DELETED",
+        "PAYMENT_REFUNDED",
+        "PAYMENT_UPDATED",
+      ];
+      const payload = {
+        name: "Racun OS — cobranças",
+        url,
+        email,
+        enabled: true,
+        interrupted: false,
+        apiVersion: 3,
+        authToken: authToken || undefined,
+        sendType: "SEQUENTIALLY",
+        events,
+      };
+
+      const list = await asaas("/webhooks");
+      const existing = (list?.data ?? []).find((w: any) => w.url === url);
+      const hook = existing
+        ? await asaas(`/webhooks/${existing.id}`, { method: "PUT", body: JSON.stringify(payload) })
+        : await asaas("/webhooks", { method: "POST", body: JSON.stringify(payload) });
+
+      return json({ ok: true, webhook: { id: hook?.id, url: hook?.url, events: hook?.events } });
+    }
+
     return bad("ação inválida");
+
   } catch (e) {
     console.error("asaas-billing error:", e);
     return bad(String((e as Error).message ?? e), 500);
