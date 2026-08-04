@@ -15,6 +15,7 @@ const Settings = lazy(() => import('./pages/Settings'));
 const Clients = lazy(() => import('./pages/Clients'));
 const ClientDetail = lazy(() => import('./pages/ClientDetail'));
 const Projects = lazy(() => import('./pages/Projects'));
+const QuotesPage = lazy(() => import('./pages/Quotes'));
 const ProjectDetail = lazy(() => import('./pages/ProjectDetail'));
 const Contents = lazy(() => import('./pages/Contents'));
 const TagsPage = lazy(() => import('./pages/TagsPage'));
