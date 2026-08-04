@@ -227,7 +227,7 @@ export function QuickCreateFab() {
           <div className="space-y-3">
             <div>
               <Label>Cliente *</Label>
-              <ClientCombobox value={projForm.client_id} onChange={v => setProjForm({ ...projForm, client_id: v })} clients={clients} onClientCreated={() => loadOptions()} />
+              <ClientCombobox value={projForm.client_id} onChange={v => setProjForm({ ...projForm, client_id: v })} clients={clients} onClientCreated={(c) => setClients(prev => [...prev, c])} />
             </div>
             {templates.length > 0 && (
               <div>
@@ -270,7 +270,7 @@ export function QuickCreateFab() {
           <div className="space-y-3">
             <div>
               <Label>Cliente *</Label>
-              <ClientCombobox value={contentForm.client_id} onChange={v => setContentForm({ ...contentForm, client_id: v, project_id: '' })} clients={clients} onClientCreated={() => loadOptions()} />
+              <ClientCombobox value={contentForm.client_id} onChange={v => setContentForm({ ...contentForm, client_id: v, project_id: '' })} clients={clients} onClientCreated={(c) => setClients(prev => [...prev, c])} />
             </div>
             <div>
               <Label>Projeto *</Label>
@@ -311,10 +311,7 @@ export function QuickCreateFab() {
           <div className="space-y-3">
             <div>
               <Label>Cliente *</Label>
-              <Select value={invForm.client_id} onValueChange={v => setInvForm({ ...invForm, client_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-              </Select>
+              <ClientCombobox value={invForm.client_id} onChange={v => setInvForm({ ...invForm, client_id: v })} clients={clients} onClientCreated={(c) => setClients(prev => [...prev, c])} />
             </div>
             <div><Label>Título *</Label><Input value={invForm.title} onChange={e => setInvForm({ ...invForm, title: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
