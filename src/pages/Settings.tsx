@@ -305,8 +305,31 @@ export default function Settings() {
           </TabsContent>
 
           {/* PAGAMENTOS */}
-          <TabsContent value="payments" className="mt-6">
+          <TabsContent value="payments" className="mt-6 space-y-6">
             <Card>
+              <CardHeader>
+                <CardTitle>Asaas — cobrança automática</CardTitle>
+                <CardDescription>
+                  Cadastra o webhook de cobranças no Asaas para que pagamentos baixem as faturas automaticamente.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button onClick={setupAsaasWebhook} disabled={!isAdmin || asaasSetup}>
+                  {asaasSetup ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Key className="mr-2 h-4 w-4" />}
+                  Cadastrar/atualizar webhook no Asaas
+                </Button>
+                {asaasWebhook && (
+                  <p className="text-sm text-emerald-400">
+                    Webhook ativo · {asaasWebhook.events?.length ?? 0} eventos de cobrança
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Eventos: criada, recebida, confirmada, recebida em dinheiro, vencida, removida, estornada e atualizada.
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+
               <CardHeader>
                 <CardTitle>Chave Pix padrão</CardTitle>
                 <CardDescription>Usada automaticamente nas cobranças e mensagens de WhatsApp</CardDescription>
