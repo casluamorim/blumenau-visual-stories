@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, Calendar, Copy, ArrowRight } from 'lucide-react';
+import { ClientCombobox } from '@/components/clients/ClientCombobox';
 import { format, differenceInDays, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Database } from '@/integrations/supabase/types';
@@ -128,12 +129,12 @@ export default function Projects() {
                 <div><Label>Nome *</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="bg-muted border-border" /></div>
                 <div>
                   <Label>Cliente *</Label>
-                  <Select value={form.client_id} onValueChange={v => setForm({ ...form, client_id: v })}>
-                    <SelectTrigger className="bg-muted border-border"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent>
-                      {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <ClientCombobox
+                    value={form.client_id}
+                    onChange={v => setForm({ ...form, client_id: v })}
+                    clients={clients as any}
+                    onClientCreated={() => loadData()}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>

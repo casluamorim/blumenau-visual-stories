@@ -23,6 +23,7 @@ import { InlineEdit } from '@/components/InlineEdit';
 import { CreditCardImport } from '@/components/financial/CreditCardImport';
 import { InlineCategorySelect } from '@/components/financial/InlineCategorySelect';
 import { CardExpenseDialog } from '@/components/financial/CardExpenseDialog';
+import { ClientCombobox } from '@/components/clients/ClientCombobox';
 import {
   expandOccurrencesForMonth,
   expandOccurrencesForMonths,
@@ -606,17 +607,8 @@ export default function Financial() {
               <p className="text-xs text-muted-foreground mt-1">Receita - despesa do mês</p>
             </CardContent>
           </Card>
-          <Card className="card-premium">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Orçamentos abertos</CardTitle>
-              <FileText className="h-5 w-5 text-blue-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">{fmt(totalQuotes)}</div>
-              <p className="text-xs text-muted-foreground mt-1">Total geral</p>
-            </CardContent>
-          </Card>
         </div>
+
 
         {/* Tabs */}
         <Tabs defaultValue="invoices" className="space-y-4">
@@ -881,158 +873,8 @@ export default function Financial() {
             })()}
           </TabsContent>
 
-
-
-          {/* QUOTES TAB */}
-          <TabsContent value="quotes" className="space-y-4">
-            <div className="flex justify-end">
-              <Button onClick={openNewQuote}><Plus className="mr-2 h-4 w-4" /> Novo Orçamento</Button>
-            </div>
-            <Card className="border-border bg-card overflow-hidden">
-              <div className="table-scroll"><Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Título</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Validade</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="w-28"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {quotes
-                    .filter(q => !search || q.title.toLowerCase().includes(search.toLowerCase()) ||
-                      q.clients?.name.toLowerCase().includes(search.toLowerCase()) ||
-                      q.clients?.company?.toLowerCase().includes(search.toLowerCase()))
-                    .map(q => {
-                      const st = quoteStatusConfig[q.status] ?? quoteStatusConfig.draft;
-                      const StIcon = st.icon;
-                      return (
-                        <TableRow key={q.id}>
-                          <TableCell className="font-medium text-foreground">
-                            <InlineEdit table="quotes" id={q.id} field="title" value={q.title} onSaved={loadData} />
-                          </TableCell>
-                          <TableCell>{clientDisplay(q.clients)}</TableCell>
-                          <TableCell className="font-medium text-foreground">
-                            <InlineEdit table="quotes" id={q.id} field="total_value" value={q.total_value} type="number" format={(v) => fmt(Number(v))} onSaved={loadData} />
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            <InlineEdit table="quotes" id={q.id} field="valid_until" value={q.valid_until} type="date" format={(v) => v ? new Date(v).toLocaleDateString('pt-BR') : '—'} onSaved={loadData} />
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={st.color}>
-                              <StIcon className="mr-1 h-3 w-3" />{st.label}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              {q.status === 'accepted' && (
-                                <Button variant="ghost" size="icon" title="Gerar fatura"
-                                  onClick={() => createInvoiceFromQuote(q)}>
-                                  <Receipt className="h-4 w-4 text-emerald-500" />
-                                </Button>
-                              )}
-                              <Button variant="ghost" size="icon" onClick={() => openEditQuote(q)}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => deleteQuote(q.id)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  {quotes.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                        Nenhum orçamento cadastrado
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table></div>
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
-
-      {/* QUOTE DIALOG */}
-      <Dialog open={showQuoteDialog} onOpenChange={setShowQuoteDialog}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingQuote ? 'Editar Orçamento' : 'Novo Orçamento'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Cliente</Label>
-              <Select value={qClientId} onValueChange={setQClientId}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {clients.map(c => <SelectItem key={c.id} value={c.id}>{clientSelectLabel(c)}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Título</Label>
-              <Input value={qTitle} onChange={e => setQTitle(e.target.value)} placeholder="Ex: Pacote Social Media" />
-            </div>
-            <div>
-              <Label>Serviços</Label>
-              <div className="space-y-2">
-                {qServices.map((s, i) => (
-                  <div key={i} className="flex gap-2">
-                    <Input placeholder="Serviço" value={s.name}
-                      onChange={e => { const arr = [...qServices]; arr[i].name = e.target.value; setQServices(arr); }}
-                      className="flex-1" />
-                    <Input type="number" placeholder="Valor" value={s.value || ''}
-                      onChange={e => { const arr = [...qServices]; arr[i].value = Number(e.target.value); setQServices(arr); }}
-                      className="w-32" />
-                    {qServices.length > 1 && (
-                      <Button variant="ghost" size="icon" onClick={() => setQServices(qServices.filter((_, j) => j !== i))}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-                <Button variant="outline" size="sm" onClick={() => setQServices([...qServices, { name: '', value: 0 }])}>
-                  <Plus className="mr-1 h-3 w-3" /> Adicionar Serviço
-                </Button>
-              </div>
-              <p className="mt-2 text-sm font-medium text-foreground">
-                Total: {fmt(qServices.reduce((a, s) => a + Number(s.value), 0))}
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Validade</Label>
-                <Input type="date" value={qValidUntil} onChange={e => setQValidUntil(e.target.value)} />
-              </div>
-              <div>
-                <Label>Status</Label>
-                <Select value={qStatus} onValueChange={setQStatus}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Rascunho</SelectItem>
-                    <SelectItem value="sent">Enviado</SelectItem>
-                    <SelectItem value="accepted">Aceito</SelectItem>
-                    <SelectItem value="rejected">Recusado</SelectItem>
-                    <SelectItem value="expired">Expirado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div>
-              <Label>Observações</Label>
-              <Textarea value={qNotes} onChange={e => setQNotes(e.target.value)} rows={2} />
-            </div>
-            <Button className="w-full" onClick={saveQuote} disabled={!qClientId || !qTitle}>
-              {editingQuote ? 'Salvar Alterações' : 'Criar Orçamento'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* INVOICE DIALOG */}
       <Dialog open={showInvoiceDialog} onOpenChange={setShowInvoiceDialog}>
@@ -1043,12 +885,13 @@ export default function Financial() {
           <div className="space-y-4">
             <div>
               <Label>Cliente</Label>
-              <Select value={iClientId} onValueChange={setIClientId}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {clients.map(c => <SelectItem key={c.id} value={c.id}>{clientSelectLabel(c)}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <ClientCombobox
+                value={iClientId}
+                onChange={setIClientId}
+                clients={clients}
+                onClientCreated={() => loadData()}
+              />
+
             </div>
             <div>
               <Label>Título</Label>
@@ -1197,13 +1040,15 @@ export default function Financial() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Cliente (opcional)</Label>
-                <Select value={eClientId || '__none__'} onValueChange={(v) => setEClientId(v === '__none__' ? '' : v)}>
-                  <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">Nenhum</SelectItem>
-                    {clients.map(c => <SelectItem key={c.id} value={c.id}>{clientSelectLabel(c)}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <ClientCombobox
+                  value={eClientId}
+                  onChange={setEClientId}
+                  clients={clients}
+                  onClientCreated={() => loadData()}
+                  allowNone
+                  noneLabel="Nenhum"
+                />
+
               </div>
               <div>
                 <Label>Projeto (opcional)</Label>

@@ -61,7 +61,29 @@ export default function Settings() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [asaasSetup, setAsaasSetup] = useState(false);
+  const [asaasWebhook, setAsaasWebhook] = useState<{ id?: string; url?: string; events?: string[] } | null>(null);
+
   const [savingProfile, setSavingProfile] = useState(false);
+
+  async function setupAsaasWebhook() {
+    setAsaasSetup(true);
+    const { data, error } = await supabase.functions.invoke('asaas-billing', {
+      body: { action: 'setup_webhook' },
+    });
+    setAsaasSetup(false);
+    if (error || (data as any)?.error) {
+      toast({
+        title: 'Erro ao cadastrar webhook',
+        description: (data as any)?.error ?? error?.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+    setAsaasWebhook((data as any)?.webhook ?? null);
+    toast({ title: 'Webhook do Asaas cadastrado!', description: 'Pagamentos agora atualizam as faturas automaticamente.' });
+  }
+
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [showPix, setShowPix] = useState(false);
@@ -305,8 +327,31 @@ export default function Settings() {
           </TabsContent>
 
           {/* PAGAMENTOS */}
-          <TabsContent value="payments" className="mt-6">
+          <TabsContent value="payments" className="mt-6 space-y-6">
             <Card>
+              <CardHeader>
+                <CardTitle>Asaas — cobrança automática</CardTitle>
+                <CardDescription>
+                  Cadastra o webhook de cobranças no Asaas para que pagamentos baixem as faturas automaticamente.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button onClick={setupAsaasWebhook} disabled={!isAdmin || asaasSetup}>
+                  {asaasSetup ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Key className="mr-2 h-4 w-4" />}
+                  Cadastrar/atualizar webhook no Asaas
+                </Button>
+                {asaasWebhook && (
+                  <p className="text-sm text-emerald-400">
+                    Webhook ativo · {asaasWebhook.events?.length ?? 0} eventos de cobrança
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Eventos: criada, recebida, confirmada, recebida em dinheiro, vencida, removida, estornada e atualizada.
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+
               <CardHeader>
                 <CardTitle>Chave Pix padrão</CardTitle>
                 <CardDescription>Usada automaticamente nas cobranças e mensagens de WhatsApp</CardDescription>
