@@ -1043,12 +1043,13 @@ export default function Financial() {
           <div className="space-y-4">
             <div>
               <Label>Cliente</Label>
-              <Select value={iClientId} onValueChange={setIClientId}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {clients.map(c => <SelectItem key={c.id} value={c.id}>{clientSelectLabel(c)}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <ClientCombobox
+                value={iClientId}
+                onChange={setIClientId}
+                clients={clients}
+                onClientCreated={() => loadData()}
+              />
+
             </div>
             <div>
               <Label>Título</Label>
@@ -1197,13 +1198,15 @@ export default function Financial() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Cliente (opcional)</Label>
-                <Select value={eClientId || '__none__'} onValueChange={(v) => setEClientId(v === '__none__' ? '' : v)}>
-                  <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">Nenhum</SelectItem>
-                    {clients.map(c => <SelectItem key={c.id} value={c.id}>{clientSelectLabel(c)}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <ClientCombobox
+                  value={eClientId}
+                  onChange={setEClientId}
+                  clients={clients}
+                  onClientCreated={() => loadData()}
+                  allowNone
+                  noneLabel="Nenhum"
+                />
+
               </div>
               <div>
                 <Label>Projeto (opcional)</Label>
