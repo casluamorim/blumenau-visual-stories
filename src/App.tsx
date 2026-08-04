@@ -70,6 +70,7 @@ function AppRoutes() {
         <Route path="/projects" element={<Projects />} />
         <Route path="/projects/:id" element={<ProjectDetail />} />
         <Route path="/contents" element={<Contents />} />
+        <Route path="/quotes" element={<QuotesPage />} />
         <Route path="/tags" element={<TagsPage />} />
         <Route path="/activity" element={<ActivityPage />} />
         <Route path="/financial" element={<Financial />} />

@@ -4,6 +4,7 @@ import {
   Users,
   FolderKanban,
   FileCheck,
+  FileText,
   Wallet,
   User,
   TrendingUp,
@@ -31,6 +32,7 @@ const sections: NavSection[] = [
       { icon: Users, label: 'Clientes', path: '/clients' },
       { icon: FolderKanban, label: 'Projetos', path: '/projects' },
       { icon: FileCheck, label: 'Aprovações', path: '/contents' },
+      { icon: FileText, label: 'Propostas', path: '/quotes' },
     ],
   },
   {
