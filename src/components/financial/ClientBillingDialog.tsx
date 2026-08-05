@@ -54,6 +54,7 @@ export function ClientBillingDialog({ open, client, onOpenChange, onSaved }: Pro
     billing_type: 'PIX',
     billing_description: '',
     billing_cpf_cnpj: '',
+    asaas_account: '1',
   });
 
   const [oneOff, setOneOff] = useState({ amount: '', due_date: '', description: '' });
@@ -69,9 +70,29 @@ export function ClientBillingDialog({ open, client, onOpenChange, onSaved }: Pro
       billing_type: client.billing_type ?? 'PIX',
       billing_description: client.billing_description ?? '',
       billing_cpf_cnpj: client.billing_cpf_cnpj ?? '',
+      asaas_account: (client as any).asaas_account ?? '1',
     });
     setOneOff({ amount: '', due_date: '', description: '' });
   }
+
+  const { data: accounts } = useQuery({
+    queryKey: ['asaas-accounts'],
+    enabled: open,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('agency_settings')
+        .select('asaas_account_1_label, asaas_account_1_cnpj, asaas_account_2_label, asaas_account_2_cnpj')
+        .limit(1)
+        .maybeSingle();
+      return data as any;
+    },
+  });
+
+  const accountLabel = (n: '1' | '2') => {
+    const label = accounts?.[`asaas_account_${n}_label`];
+    const cnpj = accounts?.[`asaas_account_${n}_cnpj`];
+    return [label || `Conta ${n}`, cnpj].filter(Boolean).join(' · ');
+  };
 
   const { data: charges = [], isFetching } = useQuery({
     queryKey: ['asaas-charges', client?.id],
@@ -103,7 +124,11 @@ export function ClientBillingDialog({ open, client, onOpenChange, onSaved }: Pro
       if (!cfg.billing_cpf_cnpj.replace(/\D/g, '')) { toast({ title: 'CPF/CNPJ é obrigatório para cobrar', variant: 'destructive' }); return; }
     }
     setSaving(true);
+    const accountChanged = ((client as any).asaas_account ?? '1') !== cfg.asaas_account;
     const { error } = await supabase.from('clients').update({
+      asaas_account: cfg.asaas_account,
+      // Ao trocar de conta (CNPJ), o cliente precisa ser recriado na nova conta
+      ...(accountChanged ? { asaas_customer_id: null } : {}),
       billing_enabled: cfg.billing_enabled,
       billing_amount: amount,
       billing_due_day: dueDay || null,
@@ -218,6 +243,20 @@ export function ClientBillingDialog({ open, client, onOpenChange, onSaved }: Pro
             </div>
           </div>
 
+          <div>
+            <Label>Conta Asaas (CNPJ que vai receber)</Label>
+            <Select value={cfg.asaas_account} onValueChange={v => setCfg(s => ({ ...s, asaas_account: v }))}>
+              <SelectTrigger className="bg-muted border-border"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">{accountLabel('1')}</SelectItem>
+                <SelectItem value="2">{accountLabel('2')}</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Todas as cobranças deste cliente são emitidas nesta conta automaticamente.
+            </p>
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Label>CPF/CNPJ do cliente *</Label>
@@ -281,6 +320,7 @@ export function ClientBillingDialog({ open, client, onOpenChange, onSaved }: Pro
                   <p className="text-xs text-muted-foreground">
                     {brl(Number(c.amount))} · vence {new Date(`${c.due_date}T00:00:00`).toLocaleDateString('pt-BR')} · {c.billing_type}
                     {c.is_recurring ? ' · recorrente' : ''}
+                    {` · ${accountLabel(String(c.asaas_account ?? '1') === '2' ? '2' : '1')}`}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

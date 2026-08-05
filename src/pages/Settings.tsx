@@ -37,6 +37,10 @@ interface AgencySettings {
   default_invoice_due_days: number;
   timezone: string;
   currency: string;
+  asaas_account_1_label?: string | null;
+  asaas_account_1_cnpj?: string | null;
+  asaas_account_2_label?: string | null;
+  asaas_account_2_cnpj?: string | null;
 }
 
 interface Profile {
@@ -62,16 +66,17 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [asaasSetup, setAsaasSetup] = useState(false);
-  const [asaasWebhook, setAsaasWebhook] = useState<{ id?: string; url?: string; events?: string[] } | null>(null);
+  const [asaasWebhook, setAsaasWebhook] = useState<Record<string, { id?: string; url?: string; events?: string[] }>>({});
+  const [asaasBusy, setAsaasBusy] = useState<string | null>(null);
 
   const [savingProfile, setSavingProfile] = useState(false);
 
-  async function setupAsaasWebhook() {
-    setAsaasSetup(true);
+  async function setupAsaasWebhook(account: '1' | '2') {
+    setAsaasBusy(account);
     const { data, error } = await supabase.functions.invoke('asaas-billing', {
-      body: { action: 'setup_webhook' },
+      body: { action: 'setup_webhook', account },
     });
-    setAsaasSetup(false);
+    setAsaasBusy(null);
     if (error || (data as any)?.error) {
       toast({
         title: 'Erro ao cadastrar webhook',
@@ -80,8 +85,8 @@ export default function Settings() {
       });
       return;
     }
-    setAsaasWebhook((data as any)?.webhook ?? null);
-    toast({ title: 'Webhook do Asaas cadastrado!', description: 'Pagamentos agora atualizam as faturas automaticamente.' });
+    setAsaasWebhook(prev => ({ ...prev, [account]: (data as any)?.webhook ?? {} }));
+    toast({ title: `Webhook da conta ${account} cadastrado!`, description: 'Pagamentos agora atualizam as faturas automaticamente.' });
   }
 
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -330,23 +335,55 @@ export default function Settings() {
           <TabsContent value="payments" className="mt-6 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Asaas — cobrança automática</CardTitle>
+                <CardTitle>Asaas — contas de cobrança (2 CNPJs)</CardTitle>
                 <CardDescription>
-                  Cadastra o webhook de cobranças no Asaas para que pagamentos baixem as faturas automaticamente.
+                  Cadastre as duas contas. Em cada cliente você escolhe por qual CNPJ ele será cobrado, e o sistema emite
+                  a cobrança na conta correta automaticamente.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <Button onClick={setupAsaasWebhook} disabled={!isAdmin || asaasSetup}>
-                  {asaasSetup ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Key className="mr-2 h-4 w-4" />}
-                  Cadastrar/atualizar webhook no Asaas
+              <CardContent className="space-y-6">
+                {(['1', '2'] as const).map(n => (
+                  <div key={n} className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+                    <p className="text-sm font-medium text-foreground">Conta {n}</p>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div>
+                        <Label>Nome/apelido da empresa</Label>
+                        <Input
+                          value={(settings as any)?.[`asaas_account_${n}_label`] ?? ''}
+                          disabled={!isAdmin}
+                          placeholder={`Empresa ${n}`}
+                          onChange={e => setSettings(s => s && ({ ...s, [`asaas_account_${n}_label`]: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <Label>CNPJ</Label>
+                        <Input
+                          value={(settings as any)?.[`asaas_account_${n}_cnpj`] ?? ''}
+                          disabled={!isAdmin}
+                          placeholder="00.000.000/0000-00"
+                          onChange={e => setSettings(s => s && ({ ...s, [`asaas_account_${n}_cnpj`]: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button variant="secondary" onClick={() => setupAsaasWebhook(n)} disabled={!isAdmin || asaasBusy === n}>
+                        {asaasBusy === n ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Key className="mr-2 h-4 w-4" />}
+                        Cadastrar/atualizar webhook
+                      </Button>
+                      {asaasWebhook[n] && (
+                        <span className="text-sm text-emerald-400">
+                          Webhook ativo · {asaasWebhook[n]?.events?.length ?? 0} eventos
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                <Button onClick={saveSettings} disabled={saving || !isAdmin}>
+                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  Salvar contas
                 </Button>
-                {asaasWebhook && (
-                  <p className="text-sm text-emerald-400">
-                    Webhook ativo · {asaasWebhook.events?.length ?? 0} eventos de cobrança
-                  </p>
-                )}
                 <p className="text-xs text-muted-foreground">
-                  Eventos: criada, recebida, confirmada, recebida em dinheiro, vencida, removida, estornada e atualizada.
+                  A chave de API da conta 1 é a ASAAS_API_KEY e a da conta 2 é a ASAAS_API_KEY_2.
                 </p>
               </CardContent>
             </Card>
