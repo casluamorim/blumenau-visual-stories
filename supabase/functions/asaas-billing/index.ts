@@ -13,8 +13,27 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ??
   Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ASAAS_API_KEY = Deno.env.get("ASAAS_API_KEY")!;
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") ?? "https://api.asaas.com/v3";
+
+// Duas contas Asaas (CNPJs diferentes). Cada cliente é cobrado na conta escolhida.
+const ASAAS_KEYS: Record<string, string> = {
+  "1": Deno.env.get("ASAAS_API_KEY") ?? "",
+  "2": Deno.env.get("ASAAS_API_KEY_2") ?? "",
+};
+
+function normAccount(v: unknown): "1" | "2" {
+  return String(v ?? "1") === "2" ? "2" : "1";
+}
+
+function keyFor(account: "1" | "2") {
+  const key = ASAAS_KEYS[account];
+  if (!key) {
+    throw new Error(
+      `A chave da conta Asaas ${account} não está configurada (ASAAS_API_KEY${account === "2" ? "_2" : ""}).`,
+    );
+  }
+  return key;
+}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -26,12 +45,12 @@ function bad(msg: string, status = 400) {
   return json({ error: msg }, status);
 }
 
-async function asaas(path: string, init: RequestInit = {}) {
+async function asaas(path: string, init: RequestInit = {}, account: "1" | "2" = "1") {
   const res = await fetch(`${ASAAS_BASE}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
-      access_token: ASAAS_API_KEY,
+      access_token: keyFor(account),
       ...(init.headers ?? {}),
     },
   });
@@ -62,6 +81,7 @@ function dueDateFor(day: number, ref = new Date()) {
 type Admin = ReturnType<typeof createClient>;
 
 async function ensureCustomer(admin: Admin, client: any) {
+  const account = normAccount(client.asaas_account);
   if (client.asaas_customer_id) return client.asaas_customer_id as string;
 
   const cpfCnpj = onlyDigits(client.billing_cpf_cnpj ?? "");
@@ -77,12 +97,12 @@ async function ensureCustomer(admin: Admin, client: any) {
   };
 
   // Reaproveita cliente já existente no Asaas pelo CPF/CNPJ
-  const existing = await asaas(`/customers?cpfCnpj=${cpfCnpj}`);
+  const existing = await asaas(`/customers?cpfCnpj=${cpfCnpj}`, {}, account);
   const found = existing?.data?.[0]?.id;
   const customerId = found ?? (await asaas("/customers", {
     method: "POST",
     body: JSON.stringify(payload),
-  })).id;
+  }, account)).id;
 
   await admin.from("clients").update({ asaas_customer_id: customerId }).eq("id", client.id);
   return customerId as string;
@@ -101,6 +121,7 @@ async function createCharge(
     createdBy?: string | null;
   },
 ) {
+  const account = normAccount(client.asaas_account);
   const customerId = await ensureCustomer(admin, client);
 
   const payment = await asaas("/payments", {
@@ -113,13 +134,13 @@ async function createCharge(
       description: opts.description,
       externalReference: client.id,
     }),
-  });
+  }, account);
 
   let pixPayload: string | null = null;
   let pixQr: string | null = null;
   if ((opts.billingType || "PIX") === "PIX") {
     try {
-      const pix = await asaas(`/payments/${payment.id}/pixQrCode`);
+      const pix = await asaas(`/payments/${payment.id}/pixQrCode`, {}, account);
       pixPayload = pix?.payload ?? null;
       pixQr = pix?.encodedImage ? `data:image/png;base64,${pix.encodedImage}` : null;
     } catch (_) { /* PIX QR opcional */ }
@@ -152,6 +173,7 @@ async function createCharge(
     pix_qr_code: pixQr,
     competence_month: opts.competence ?? monthKey(new Date(`${opts.dueDate}T00:00:00Z`)),
     is_recurring: opts.isRecurring,
+    asaas_account: account,
     created_by: opts.createdBy ?? null,
   }).select("*").maybeSingle();
 
@@ -162,7 +184,9 @@ async function createCharge(
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return bad("method not allowed", 405);
-  if (!ASAAS_API_KEY) return bad("ASAAS_API_KEY não configurada", 500);
+  if (!ASAAS_KEYS["1"] && !ASAAS_KEYS["2"]) {
+    return bad("Nenhuma chave de API do Asaas configurada", 500);
+  }
 
   let body: any;
   try { body = await req.json(); } catch { return bad("invalid json"); }
@@ -203,7 +227,7 @@ Deno.serve(async (req) => {
         .eq("id", body.client_id).maybeSingle();
       if (!client) return bad("cliente não encontrado", 404);
       const id = await ensureCustomer(admin, client);
-      return json({ ok: true, asaas_customer_id: id });
+      return json({ ok: true, asaas_customer_id: id, account: normAccount(client.asaas_account) });
     }
 
     if (action === "create_charge") {
@@ -266,7 +290,11 @@ Deno.serve(async (req) => {
       const { data: charge } = await admin.from("asaas_charges").select("*")
         .eq("id", body.charge_id).maybeSingle();
       if (!charge) return bad("cobrança não encontrada", 404);
-      const payment = await asaas(`/payments/${charge.asaas_payment_id}`);
+      const payment = await asaas(
+        `/payments/${charge.asaas_payment_id}`,
+        {},
+        normAccount(charge.asaas_account),
+      );
       await admin.from("asaas_charges").update({
         status: payment.status,
         invoice_url: payment.invoiceUrl ?? charge.invoice_url,
@@ -279,7 +307,11 @@ Deno.serve(async (req) => {
       const { data: charge } = await admin.from("asaas_charges").select("*")
         .eq("id", body.charge_id).maybeSingle();
       if (!charge) return bad("cobrança não encontrada", 404);
-      await asaas(`/payments/${charge.asaas_payment_id}`, { method: "DELETE" });
+      await asaas(
+        `/payments/${charge.asaas_payment_id}`,
+        { method: "DELETE" },
+        normAccount(charge.asaas_account),
+      );
       await admin.from("asaas_charges").update({ status: "CANCELLED" }).eq("id", charge.id);
       if (charge.invoice_id) {
         await admin.from("invoices").update({ status: "cancelled" }).eq("id", charge.invoice_id);
@@ -290,6 +322,7 @@ Deno.serve(async (req) => {
     // Cadastra (ou atualiza) o webhook de cobranças no Asaas apontando
     // para a função asaas-webhook, com token de autenticação próprio.
     if (action === "setup_webhook") {
+      const account = normAccount(body.account);
       const url = String(body.url ?? `${SUPABASE_URL}/functions/v1/asaas-webhook`);
       const email = String(body.email ?? "financeiro@agenciaracun.com");
       const authToken = Deno.env.get("ASAAS_WEBHOOK_TOKEN") ?? "";
@@ -304,7 +337,7 @@ Deno.serve(async (req) => {
         "PAYMENT_UPDATED",
       ];
       const payload = {
-        name: "Racun OS — cobranças",
+        name: `Racun OS — cobranças (conta ${account})`,
         url,
         email,
         enabled: true,
@@ -315,13 +348,13 @@ Deno.serve(async (req) => {
         events,
       };
 
-      const list = await asaas("/webhooks");
+      const list = await asaas("/webhooks", {}, account);
       const existing = (list?.data ?? []).find((w: any) => w.url === url);
       const hook = existing
-        ? await asaas(`/webhooks/${existing.id}`, { method: "PUT", body: JSON.stringify(payload) })
-        : await asaas("/webhooks", { method: "POST", body: JSON.stringify(payload) });
+        ? await asaas(`/webhooks/${existing.id}`, { method: "PUT", body: JSON.stringify(payload) }, account)
+        : await asaas("/webhooks", { method: "POST", body: JSON.stringify(payload) }, account);
 
-      return json({ ok: true, webhook: { id: hook?.id, url: hook?.url, events: hook?.events } });
+      return json({ ok: true, account, webhook: { id: hook?.id, url: hook?.url, events: hook?.events } });
     }
 
     return bad("ação inválida");
