@@ -51,6 +51,10 @@ export type Database = {
           agency_logo_url: string | null
           agency_name: string
           agency_phone: string | null
+          asaas_account_1_cnpj: string | null
+          asaas_account_1_label: string | null
+          asaas_account_2_cnpj: string | null
+          asaas_account_2_label: string | null
           created_at: string
           currency: string
           default_invoice_due_days: number
@@ -74,6 +78,10 @@ export type Database = {
           agency_logo_url?: string | null
           agency_name?: string
           agency_phone?: string | null
+          asaas_account_1_cnpj?: string | null
+          asaas_account_1_label?: string | null
+          asaas_account_2_cnpj?: string | null
+          asaas_account_2_label?: string | null
           created_at?: string
           currency?: string
           default_invoice_due_days?: number
@@ -97,6 +105,10 @@ export type Database = {
           agency_logo_url?: string | null
           agency_name?: string
           agency_phone?: string | null
+          asaas_account_1_cnpj?: string | null
+          asaas_account_1_label?: string | null
+          asaas_account_2_cnpj?: string | null
+          asaas_account_2_label?: string | null
           created_at?: string
           currency?: string
           default_invoice_due_days?: number
@@ -119,6 +131,7 @@ export type Database = {
       asaas_charges: {
         Row: {
           amount: number
+          asaas_account: string
           asaas_payment_id: string
           billing_type: string
           client_id: string
@@ -139,6 +152,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          asaas_account?: string
           asaas_payment_id: string
           billing_type?: string
           client_id: string
@@ -159,6 +173,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          asaas_account?: string
           asaas_payment_id?: string
           billing_type?: string
           client_id?: string
@@ -353,6 +368,7 @@ export type Database = {
       }
       clients: {
         Row: {
+          asaas_account: string
           asaas_customer_id: string | null
           auth_user_id: string | null
           avg_response_time: string | null
@@ -380,6 +396,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          asaas_account?: string
           asaas_customer_id?: string | null
           auth_user_id?: string | null
           avg_response_time?: string | null
@@ -407,6 +424,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          asaas_account?: string
           asaas_customer_id?: string | null
           auth_user_id?: string | null
           avg_response_time?: string | null
