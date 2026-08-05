@@ -1,58 +1,86 @@
-## Objetivo
-Adicionar um novo tipo de acesso "Cliente" no sistema, usando a MESMA tela de login atual (email + senha). O sistema detecta automaticamente o tipo de usuário (admin / funcionário / cliente) e redireciona corretamente. O acesso atual por link público (`/portal/:slug`) continua funcionando intacto.
+# Expandir o módulo de Projetos (Racun HQ)
 
-## Mudanças no banco
+## 1. O que já existe hoje (análise)
 
-1. Nova role `client` no enum `app_role`.
-2. Tabela `clients`: adicionar coluna `auth_user_id uuid` (nullable, unique) ligando o cliente a um usuário do `auth.users`.
-3. Atualizar funções `can_access_client` / `can_edit_client` para que um usuário com role `client` só enxergue/edite o cliente cujo `auth_user_id = auth.uid()`.
-4. Novas policies para `projects`, `contents`, `content_versions`, `comments`, `content_comments`, `invoices`, `quotes` — permitindo SELECT quando o usuário autenticado é o cliente dono (via `clients.auth_user_id = auth.uid()`).
-5. Trigger / função auxiliar `is_client_of(client_id)` para reaproveitar nas policies.
+### Banco de dados
+Tabela `projects` (já criada, NÃO será recriada):
+- `id`, `name`, `client_id` (liga na tabela `clients`, não é `client_name` em texto)
+- `status` (enum `project_status`: briefing, in_progress, review, completed, paused, cancelled)
+- `priority` (enum: low, medium, high, urgent)
+- `deadline` (data) — já existe
+- `description` (texto) — já existe
+- `created_by`, `created_at`, `updated_at`
 
-## Edge function `client-create-access`
-- Chamada pelo admin a partir da tela de Clientes, botão **"Enviar acesso"** / **"Gerar login"**.
-- Recebe `{ client_id, email }`.
-- Valida que quem chama é admin.
-- Cria usuário no `auth.users` via service role (sem senha — usa `inviteUserByEmail` OU cria com senha temporária + envia recovery). Vamos usar `admin.generateLink({ type: 'invite' })` para obter um link de definição de senha, ou simplesmente criar o usuário sem confirmar e usar `resetPasswordForEmail`.
-- Insere role `client` em `user_roles`.
-- Faz `update clients set auth_user_id = newUser.id, email = email where id = client_id`.
-- Retorna o link de primeiro acesso (admin pode copiar e enviar).
+Ou seja: **deadline e description já existem**. Do item 1 do seu pedido, só falta o status "atrasado".
 
-## Frontend
+Tabelas relacionadas que já existem e serão reaproveitadas:
+- `contents` (conteúdos do projeto, com `drive_url`, status de mídia e copy, checklist)
+- `content_versions`, `content_comments` (versões e comentários)
+- `project_templates` (modelos com checklist e conteúdos padrão)
+- `client_assignments` + funções `can_access_client` / `can_edit_client` — o controle de acesso hoje é **por cliente**, não por projeto
+- `user_roles` (admin, manager, editor, viewer, financeiro, social_media, client)
+- `activity_logs` (log genérico) e `client_notifications` (notificações vindas do portal do cliente)
+- `tags` / `project_tags`
 
-### Tela de login atual (`Auth.tsx`)
-- Continua igual visualmente.
-- Após `signIn`, novo hook detecta a role do usuário; se `client`, redireciona para `/portal-cliente` (rota interna do cliente autenticado).
-- Adicionar link **"Esqueci minha senha"** (usa `resetPasswordForEmail`) e tela `/reset-password` para definir nova senha.
-- Adicionar tela `/definir-senha` para primeiro acesso (cliente que recebeu link de invite).
+### Código
+- Rotas: `/projects` (lista) e `/projects/:id` (detalhe), em `src/App.tsx`
+- `src/pages/Projects.tsx` — grid de cards, busca, criação/duplicação de projeto, barra de prazo
+- `src/pages/ProjectDetail.tsx` — hoje é focado em **conteúdos** (criar conteúdo, upload de arquivos no bucket `content-files`, preview de vídeo do Drive, checklist)
+- `src/pages/ClientDetail.tsx` — Client Hub, com aba de Projetos
+- `src/components/layout/QuickCreateFab.tsx` — criação rápida de projeto
+- `src/hooks/useAuth.tsx` — expõe `role` do usuário
+- Padrão de dados: chamadas diretas ao cliente Supabase dentro das páginas (sem camada de hooks por entidade)
 
-### Roteamento (`App.tsx`)
-- Adicionar `/portal-cliente` (área autenticada do cliente — reutiliza `ClientPortal` parametrizado pelo cliente atual do usuário logado).
-- Adicionar `/reset-password` e `/definir-senha` (rotas públicas, fora do `AuthProvider` autenticado de admin).
-- Em `AppRoutes`, se `role === 'client'`, renderizar apenas as rotas do portal do cliente (bloquear dashboard/financeiro/etc).
+## 2. Proposta de encaixe (reaproveitando o máximo)
 
-### Portal do cliente autenticado
-- Nova página fina `ClientPortalAuth.tsx` que descobre `client_id` via `select id, slug from clients where auth_user_id = auth.uid()` e renderiza o `ClientPortal` existente passando o slug (sem alterar `ClientPortal.tsx`).
+### Banco — alterações em tabelas existentes
+- Adicionar o valor `delayed` (atrasado) ao enum `project_status`
+- Nada mais a mudar em `projects`
 
-### Página de Clientes (`Clients.tsx`)
-- Novo botão por cliente: **"Acesso por senha"** que abre modal:
-  - Input email (pré-preenchido com `client.email`).
-  - Botão **"Gerar acesso"** → chama edge function → mostra link de primeiro acesso para copiar.
-  - Se cliente já tem `auth_user_id`: mostra status "Login ativo (email@x)" + botão **"Reenviar link de redefinição de senha"**.
+### Banco — tabelas novas
+- `project_stages` — id, project_id, name, order_index, assigned_role (enum já existente `app_role`), status (not_started / in_progress / completed), started_at, completed_at, expected_duration_hours
+- `project_access` — id, project_id, user_id, role, can_edit (complementa `client_assignments`, sem substituí-lo: acesso por cliente continua valendo para admin/gestor)
+- `project_links` — id, project_id, stage_id (opcional), title, url, type (drive/arquivo/referencia/outro), added_by, created_at
+- `project_updates` — id, project_id, stage_id, user_id, message, created_at
+- `notifications` — id, user_id, project_id, stage_id, type (stage_completed / deadline_near / overdue / stalled), read, created_at
+  (a `client_notifications` continua existindo só para eventos do portal do cliente)
 
-## Segurança
-- Isolamento total via RLS — cliente só vê dados onde `clients.auth_user_id = auth.uid()`.
-- Rotas frontend bloqueadas por role no `AppRoutes`.
-- Acesso por token público (`/portal/:slug`) permanece inalterado.
+### Banco — RLS (regras de acesso)
+Função nova `can_access_project(user, project)` e `can_edit_project_stage(user, stage)`, em SQL security definer, cruzando:
+- admin → tudo
+- quem já tem acesso pelo cliente (`can_access_client`) → mantém acesso
+- quem está em `project_access` → vê o projeto; edita fases só se `can_edit = true` **e** `assigned_role` bater com seu papel
+- `visualizador` → apenas leitura
 
-## Não-mudanças (preservar)
-- `Auth.tsx` mantém visual.
-- Fluxo admin/funcionário inalterado.
-- `ClientPortal.tsx` não é reescrito.
-- `admin-create-user` continua igual.
-- Link público `/portal/:slug` continua igual.
+Links, updates e fases: leitura para quem tem acesso ao projeto; escrita conforme a regra da fase.
 
-## Ordem de implementação
-1. Migration: enum, coluna `auth_user_id`, funções, policies.
-2. Edge function `client-create-access`.
-3. Frontend: roteamento, login redirect por role, página de definir/reset senha, portal cliente autenticado, botão no `Clients.tsx`.
+### Código — o que reaproveita e o que é novo
+Reaproveitar (só editar):
+- `src/pages/Projects.tsx` — adicionar coluna/badge de **fase atual** e indicador de atraso nos cards existentes
+- `src/pages/ProjectDetail.tsx` — passar a ter abas: **Fluxo (fases)**, **Conteúdos** (o que já existe hoje, intacto), **Links**, **Histórico**, **Acesso**
+- `src/components/layout/AppLayout.tsx` — sininho de notificações no topo
+- `src/hooks/useAuth.tsx` — usado para saber o papel e montar a visão do editor
+
+Componentes novos (só o que realmente é novo):
+- `src/components/projects/StageTimeline.tsx` — stepper das fases com "Iniciar fase" / "Concluir e avançar" e campo de atualização
+- `src/components/projects/ProjectLinksPanel.tsx` — links agrupados por fase
+- `src/components/projects/ProjectUpdatesFeed.tsx` — histórico
+- `src/components/projects/ProjectAccessPanel.tsx` — quem tem acesso (admin)
+- `src/components/notifications/NotificationBell.tsx` — contador de não lidas
+- `src/lib/projectTiming.ts` — `calculateProjectTiming(project, stages)`: tempo por fase, comparação com o previsto, total acumulado, tempo restante até o deadline e cor (verde/amarelo/vermelho)
+- `src/pages/MyWork.tsx` (rota `/meu-trabalho`) — painel do editor/social media, só com projetos e fases dele
+
+### Automações
+- Trigger no banco: ao concluir uma fase grava `completed_at`, libera a próxima (`in_progress`) e cria notificação para os admins
+- Fases padrão (Captação → Decupagem → Edição Bruta → Revisão Interna → Ajustes → Aprovação Cliente → Entrega Final) criadas via botão "Gerar fluxo padrão" no projeto, com papel sugerido por fase
+- Prazo próximo (padrão 3 dias), atraso e fase parada (>48h) calculados por uma função agendada diária que grava em `notifications`
+
+## 3. Ordem de execução
+1. Migration 1: enum `delayed` + as 5 tabelas novas com GRANTs e RLS
+2. Migration 2: funções de acesso, trigger de conclusão de fase
+3. `src/lib/projectTiming.ts` + componentes novos
+4. Edição de `ProjectDetail.tsx` (abas) e `Projects.tsx` (fase atual/atraso)
+5. Sininho de notificações + rota `/meu-trabalho`
+6. Job diário de prazos/gargalos
+
+Cada migration será mostrada para você aprovar antes de rodar.
