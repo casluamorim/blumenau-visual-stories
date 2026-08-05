@@ -65,7 +65,6 @@ export default function Settings() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [asaasSetup, setAsaasSetup] = useState(false);
   const [asaasWebhook, setAsaasWebhook] = useState<Record<string, { id?: string; url?: string; events?: string[] }>>({});
   const [asaasBusy, setAsaasBusy] = useState<string | null>(null);
 
