@@ -501,6 +501,8 @@ export default function ProjectDetail() {
             </div>
           )}
         </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
