@@ -18,10 +18,19 @@ import {
   Image, Video, Trash2, ExternalLink, Loader2, Link2
 } from 'lucide-react';
 import { getDrivePreviewUrl, isDriveUrl } from '@/lib/drive';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { StageTimeline } from '@/components/projects/StageTimeline';
+import { ProjectLinksPanel } from '@/components/projects/ProjectLinksPanel';
+import { ProjectUpdatesFeed } from '@/components/projects/ProjectUpdatesFeed';
+import { ProjectAccessPanel } from '@/components/projects/ProjectAccessPanel';
 import type { Database } from '@/integrations/supabase/types';
 
 type Content = Database['public']['Tables']['contents']['Row'];
 type Project = Database['public']['Tables']['projects']['Row'];
+type Stage = Database['public']['Tables']['project_stages']['Row'];
+type ProjectLink = Database['public']['Tables']['project_links']['Row'];
+type ProjectUpdate = Database['public']['Tables']['project_updates']['Row'];
+type ProjectAccess = Database['public']['Tables']['project_access']['Row'];
 
 const contentStatusConfig: Record<string, { label: string; color: string }> = {
   draft: { label: 'Rascunho', color: 'bg-gray-500/10 text-gray-400 border-gray-500/20' },
