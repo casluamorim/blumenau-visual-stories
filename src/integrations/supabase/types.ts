@@ -915,6 +915,57 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string | null
+          project_id: string | null
+          read: boolean
+          stage_id: string | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          project_id?: string | null
+          read?: boolean
+          stage_id?: string | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          project_id?: string | null
+          read?: boolean
+          stage_id?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "project_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       personal_income: {
         Row: {
           amount: number
@@ -1028,6 +1079,145 @@ export type Database = {
         }
         Relationships: []
       }
+      project_access: {
+        Row: {
+          can_edit: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          project_id: string
+          role: Database["public"]["Enums"]["project_access_role"]
+          user_id: string
+        }
+        Insert: {
+          can_edit?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          project_id: string
+          role?: Database["public"]["Enums"]["project_access_role"]
+          user_id: string
+        }
+        Update: {
+          can_edit?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          project_id?: string
+          role?: Database["public"]["Enums"]["project_access_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_access_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_links: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          id: string
+          project_id: string
+          stage_id: string | null
+          title: string
+          type: Database["public"]["Enums"]["project_link_type"]
+          url: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          id?: string
+          project_id: string
+          stage_id?: string | null
+          title: string
+          type?: Database["public"]["Enums"]["project_link_type"]
+          url: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          id?: string
+          project_id?: string
+          stage_id?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["project_link_type"]
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_links_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_links_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "project_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_stages: {
+        Row: {
+          assigned_role: Database["public"]["Enums"]["app_role"] | null
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string
+          expected_duration_hours: number | null
+          id: string
+          name: string
+          order_index: number
+          project_id: string
+          started_at: string | null
+          status: Database["public"]["Enums"]["project_stage_status"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_role?: Database["public"]["Enums"]["app_role"] | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          expected_duration_hours?: number | null
+          id?: string
+          name: string
+          order_index?: number
+          project_id: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["project_stage_status"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_role?: Database["public"]["Enums"]["app_role"] | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          expected_duration_hours?: number | null
+          id?: string
+          name?: string
+          order_index?: number
+          project_id?: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["project_stage_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_stages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_tags: {
         Row: {
           project_id: string
@@ -1093,6 +1283,48 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      project_updates: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          project_id: string
+          stage_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          project_id: string
+          stage_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          project_id?: string
+          stage_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_updates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_updates_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "project_stages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       projects: {
         Row: {
@@ -1281,8 +1513,20 @@ export type Database = {
         Args: { _client_id: string; _user_id: string }
         Returns: boolean
       }
+      can_access_project: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_edit_client: {
         Args: { _client_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_edit_project: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_edit_project_stage: {
+        Args: { _stage_id: string; _user_id: string }
         Returns: boolean
       }
       generate_unique_client_slug: {
@@ -1345,6 +1589,11 @@ export type Database = {
       expense_status: "pending" | "paid" | "overdue"
       financial_type: "pj" | "pf"
       invoice_status: "pending" | "paid" | "overdue" | "cancelled"
+      notification_type:
+        | "stage_completed"
+        | "deadline_near"
+        | "overdue"
+        | "stalled"
       payment_method:
         | "pix"
         | "bank_transfer"
@@ -1352,6 +1601,9 @@ export type Database = {
         | "boleto"
         | "other"
       priority_level: "low" | "medium" | "high" | "urgent"
+      project_access_role: "admin" | "editor" | "social_media" | "visualizador"
+      project_link_type: "drive" | "arquivo" | "referencia" | "outro"
+      project_stage_status: "not_started" | "in_progress" | "completed"
       project_status:
         | "briefing"
         | "in_progress"
@@ -1359,6 +1611,7 @@ export type Database = {
         | "completed"
         | "paused"
         | "cancelled"
+        | "delayed"
       quote_status: "draft" | "sent" | "accepted" | "rejected" | "expired"
       recurrence_type: "one_time" | "recurring"
     }
@@ -1518,6 +1771,12 @@ export const Constants = {
       expense_status: ["pending", "paid", "overdue"],
       financial_type: ["pj", "pf"],
       invoice_status: ["pending", "paid", "overdue", "cancelled"],
+      notification_type: [
+        "stage_completed",
+        "deadline_near",
+        "overdue",
+        "stalled",
+      ],
       payment_method: [
         "pix",
         "bank_transfer",
@@ -1526,6 +1785,9 @@ export const Constants = {
         "other",
       ],
       priority_level: ["low", "medium", "high", "urgent"],
+      project_access_role: ["admin", "editor", "social_media", "visualizador"],
+      project_link_type: ["drive", "arquivo", "referencia", "outro"],
+      project_stage_status: ["not_started", "in_progress", "completed"],
       project_status: [
         "briefing",
         "in_progress",
@@ -1533,6 +1795,7 @@ export const Constants = {
         "completed",
         "paused",
         "cancelled",
+        "delayed",
       ],
       quote_status: ["draft", "sent", "accepted", "rejected", "expired"],
       recurrence_type: ["one_time", "recurring"],
