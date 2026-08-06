@@ -40,6 +40,7 @@ const priorityConfig: Record<string, { label: string; color: string }> = {
 
 export default function Projects() {
   const [projects, setProjects] = useState<(Project & { clients: { name: string } | null })[]>([]);
+  const [stages, setStages] = useState<Database['public']['Tables']['project_stages']['Row'][]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -59,6 +60,11 @@ export default function Projects() {
     ]);
     setProjects((p.data as any) ?? []);
     setClients(c.data ?? []);
+    const ids = (p.data ?? []).map((x: any) => x.id);
+    if (ids.length) {
+      const { data: st } = await supabase.from('project_stages').select('*').in('project_id', ids).order('order_index');
+      setStages(st ?? []);
+    }
   }
 
   async function handleSave() {
