@@ -17,6 +17,7 @@ const ClientDetail = lazy(() => import('./pages/ClientDetail'));
 const Projects = lazy(() => import('./pages/Projects'));
 const QuotesPage = lazy(() => import('./pages/Quotes'));
 const ProjectDetail = lazy(() => import('./pages/ProjectDetail'));
+const MyWork = lazy(() => import('./pages/MyWork'));
 const Contents = lazy(() => import('./pages/Contents'));
 const TagsPage = lazy(() => import('./pages/TagsPage'));
 const ActivityPage = lazy(() => import('./pages/ActivityPage'));
@@ -69,6 +70,7 @@ function AppRoutes() {
         <Route path="/clients/:id" element={<ClientDetail />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/projects/:id" element={<ProjectDetail />} />
+        <Route path="/meu-trabalho" element={<MyWork />} />
         <Route path="/contents" element={<Contents />} />
         <Route path="/quotes" element={<QuotesPage />} />
         <Route path="/tags" element={<TagsPage />} />

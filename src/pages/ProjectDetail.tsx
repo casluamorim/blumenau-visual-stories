@@ -18,10 +18,19 @@ import {
   Image, Video, Trash2, ExternalLink, Loader2, Link2
 } from 'lucide-react';
 import { getDrivePreviewUrl, isDriveUrl } from '@/lib/drive';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { StageTimeline } from '@/components/projects/StageTimeline';
+import { ProjectLinksPanel } from '@/components/projects/ProjectLinksPanel';
+import { ProjectUpdatesFeed } from '@/components/projects/ProjectUpdatesFeed';
+import { ProjectAccessPanel } from '@/components/projects/ProjectAccessPanel';
 import type { Database } from '@/integrations/supabase/types';
 
 type Content = Database['public']['Tables']['contents']['Row'];
 type Project = Database['public']['Tables']['projects']['Row'];
+type Stage = Database['public']['Tables']['project_stages']['Row'];
+type ProjectLink = Database['public']['Tables']['project_links']['Row'];
+type ProjectUpdate = Database['public']['Tables']['project_updates']['Row'];
+type ProjectAccess = Database['public']['Tables']['project_access']['Row'];
 
 const contentStatusConfig: Record<string, { label: string; color: string }> = {
   draft: { label: 'Rascunho', color: 'bg-gray-500/10 text-gray-400 border-gray-500/20' },
@@ -55,8 +64,26 @@ export default function ProjectDetail() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [contentFiles, setContentFiles] = useState<Record<string, ContentFile[]>>({});
   const [uploading, setUploading] = useState<string | null>(null);
-  const { user } = useAuth();
+  const [stages, setStages] = useState<Stage[]>([]);
+  const [links, setLinks] = useState<ProjectLink[]>([]);
+  const [updates, setUpdates] = useState<ProjectUpdate[]>([]);
+  const [access, setAccess] = useState<ProjectAccess[]>([]);
+  const [names, setNames] = useState<Record<string, string>>({});
+  const { user, role } = useAuth();
   const { toast } = useToast();
+
+  const isAdmin = role === 'admin' || role === 'manager';
+  const myAccess = access.find(a => a.user_id === user?.id);
+  const canManage = isAdmin || (!!myAccess && myAccess.can_edit && myAccess.role === 'admin');
+  const canAddLinks = isAdmin || (!!myAccess && myAccess.can_edit);
+
+  function canEditStage(stage: Stage) {
+    if (isAdmin) return true;
+    if (stage.assigned_to === user?.id) return true;
+    if (!myAccess || !myAccess.can_edit || myAccess.role === 'visualizador') return false;
+    if (myAccess.role === 'admin') return true;
+    return !stage.assigned_role || stage.assigned_role === (myAccess.role as any);
+  }
 
   const [form, setForm] = useState({
     title: '', type: 'photo' as any, priority: 'medium' as any, deadline: '',
@@ -66,6 +93,28 @@ export default function ProjectDetail() {
 
   useEffect(() => { if (id) loadData(); }, [id]);
 
+  async function loadProjectExtras() {
+    const [st, lk, up, ac] = await Promise.all([
+      supabase.from('project_stages').select('*').eq('project_id', id!).order('order_index'),
+      supabase.from('project_links').select('*').eq('project_id', id!).order('created_at', { ascending: false }),
+      supabase.from('project_updates').select('*').eq('project_id', id!).order('created_at', { ascending: false }).limit(100),
+      supabase.from('project_access').select('*').eq('project_id', id!),
+    ]);
+    setStages(st.data ?? []);
+    setLinks(lk.data ?? []);
+    setUpdates(up.data ?? []);
+    setAccess(ac.data ?? []);
+
+    const userIds = Array.from(new Set([
+      ...(up.data ?? []).map(u => u.user_id).filter(Boolean) as string[],
+      ...(ac.data ?? []).map(a => a.user_id),
+    ]));
+    if (userIds.length) {
+      const { data: profs } = await supabase.from('profiles').select('user_id, full_name').in('user_id', userIds);
+      setNames(Object.fromEntries((profs ?? []).map(p => [p.user_id, p.full_name])));
+    }
+  }
+
   async function loadData() {
     const [p, c] = await Promise.all([
       supabase.from('projects').select('*, clients(name)').eq('id', id!).single(),
@@ -74,6 +123,7 @@ export default function ProjectDetail() {
     setProject(p.data as any);
     const contentsList = c.data ?? [];
     setContents(contentsList);
+    loadProjectExtras();
 
     // Load files for all contents
     const filesMap: Record<string, ContentFile[]> = {};
@@ -182,8 +232,54 @@ export default function ProjectDetail() {
           </div>
         </div>
 
+        <Tabs defaultValue="flow" className="space-y-6">
+          <TabsList className="flex w-full flex-wrap justify-start gap-1 bg-muted">
+            <TabsTrigger value="flow">Fluxo</TabsTrigger>
+            <TabsTrigger value="contents">Conteúdos</TabsTrigger>
+            <TabsTrigger value="links">Links</TabsTrigger>
+            <TabsTrigger value="history">Histórico</TabsTrigger>
+            <TabsTrigger value="access">Acesso</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="flow">
+            <StageTimeline
+              projectId={id!}
+              project={project}
+              stages={stages}
+              links={links}
+              canManage={canManage}
+              canEditStage={canEditStage}
+              onChange={loadProjectExtras}
+            />
+          </TabsContent>
+
+          <TabsContent value="links">
+            <ProjectLinksPanel
+              projectId={id!}
+              links={links}
+              stages={stages}
+              canEdit={canAddLinks}
+              onChange={loadProjectExtras}
+            />
+          </TabsContent>
+
+          <TabsContent value="history">
+            <ProjectUpdatesFeed updates={updates} stages={stages} names={names} />
+          </TabsContent>
+
+          <TabsContent value="access">
+            <ProjectAccessPanel
+              projectId={id!}
+              access={access}
+              canManage={canManage}
+              onChange={loadProjectExtras}
+            />
+          </TabsContent>
+
+          <TabsContent value="contents" className="space-y-6">
         {/* Content List Header */}
         <div className="flex items-center justify-between">
+
           <h2 className="font-display text-xl font-semibold text-foreground">
             Conteúdos ({contents.length})
           </h2>
@@ -405,6 +501,8 @@ export default function ProjectDetail() {
             </div>
           )}
         </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );

@@ -15,6 +15,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, Calendar, Copy, ArrowRight } from 'lucide-react';
 import { ClientCombobox } from '@/components/clients/ClientCombobox';
+import { calculateProjectTiming } from '@/lib/projectTiming';
 import { format, differenceInDays, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Database } from '@/integrations/supabase/types';
@@ -40,6 +41,7 @@ const priorityConfig: Record<string, { label: string; color: string }> = {
 
 export default function Projects() {
   const [projects, setProjects] = useState<(Project & { clients: { name: string } | null })[]>([]);
+  const [stages, setStages] = useState<Database['public']['Tables']['project_stages']['Row'][]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -59,6 +61,11 @@ export default function Projects() {
     ]);
     setProjects((p.data as any) ?? []);
     setClients(c.data ?? []);
+    const ids = (p.data ?? []).map((x: any) => x.id);
+    if (ids.length) {
+      const { data: st } = await supabase.from('project_stages').select('*').in('project_id', ids).order('order_index');
+      setStages(st ?? []);
+    }
   }
 
   async function handleSave() {
@@ -174,6 +181,7 @@ export default function Projects() {
             const deadlineInfo = getDeadlineInfo(project.deadline);
             const status = statusConfig[project.status] ?? { label: project.status, color: '' };
             const priority = priorityConfig[project.priority] ?? { label: project.priority, color: '' };
+            const timing = calculateProjectTiming(project, stages.filter(s => s.project_id === project.id));
             return (
               <Card key={project.id} className="border-border bg-card group hover:border-primary/30 transition-colors">
                 <CardHeader className="pb-3">
@@ -191,7 +199,17 @@ export default function Projects() {
                   <div className="flex flex-wrap gap-2">
                     <Badge variant="outline" className={status.color}>{status.label}</Badge>
                     <Badge variant="outline" className={`${priority.color} border-current/20`}>{priority.label}</Badge>
+                    {timing.totalStages > 0 && (
+                      <Badge variant="outline" className={timing.levelClass}>{timing.levelLabel}</Badge>
+                    )}
                   </div>
+                  {timing.currentStage && (
+                    <p className="text-xs text-muted-foreground">
+                      Fase atual: <span className="text-foreground">{timing.currentStage.name}</span>
+                      {' · '}{timing.completedStages}/{timing.totalStages} concluídas
+                    </p>
+                  )}
+
                   {deadlineInfo && (
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-xs">

@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
+  ListChecks,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,6 +32,7 @@ const sections: NavSection[] = [
       { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
       { icon: Users, label: 'Clientes', path: '/clients' },
       { icon: FolderKanban, label: 'Projetos', path: '/projects' },
+      { icon: ListChecks, label: 'Meu Trabalho', path: '/meu-trabalho' },
       { icon: FileCheck, label: 'Aprovações', path: '/contents' },
       { icon: FileText, label: 'Propostas', path: '/quotes' },
     ],
