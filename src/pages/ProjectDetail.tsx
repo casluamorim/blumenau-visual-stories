@@ -93,6 +93,28 @@ export default function ProjectDetail() {
 
   useEffect(() => { if (id) loadData(); }, [id]);
 
+  async function loadProjectExtras() {
+    const [st, lk, up, ac] = await Promise.all([
+      supabase.from('project_stages').select('*').eq('project_id', id!).order('order_index'),
+      supabase.from('project_links').select('*').eq('project_id', id!).order('created_at', { ascending: false }),
+      supabase.from('project_updates').select('*').eq('project_id', id!).order('created_at', { ascending: false }).limit(100),
+      supabase.from('project_access').select('*').eq('project_id', id!),
+    ]);
+    setStages(st.data ?? []);
+    setLinks(lk.data ?? []);
+    setUpdates(up.data ?? []);
+    setAccess(ac.data ?? []);
+
+    const userIds = Array.from(new Set([
+      ...(up.data ?? []).map(u => u.user_id).filter(Boolean) as string[],
+      ...(ac.data ?? []).map(a => a.user_id),
+    ]));
+    if (userIds.length) {
+      const { data: profs } = await supabase.from('profiles').select('user_id, full_name').in('user_id', userIds);
+      setNames(Object.fromEntries((profs ?? []).map(p => [p.user_id, p.full_name])));
+    }
+  }
+
   async function loadData() {
     const [p, c] = await Promise.all([
       supabase.from('projects').select('*, clients(name)').eq('id', id!).single(),
@@ -101,6 +123,7 @@ export default function ProjectDetail() {
     setProject(p.data as any);
     const contentsList = c.data ?? [];
     setContents(contentsList);
+    loadProjectExtras();
 
     // Load files for all contents
     const filesMap: Record<string, ContentFile[]> = {};
