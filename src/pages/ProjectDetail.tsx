@@ -64,8 +64,26 @@ export default function ProjectDetail() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [contentFiles, setContentFiles] = useState<Record<string, ContentFile[]>>({});
   const [uploading, setUploading] = useState<string | null>(null);
-  const { user } = useAuth();
+  const [stages, setStages] = useState<Stage[]>([]);
+  const [links, setLinks] = useState<ProjectLink[]>([]);
+  const [updates, setUpdates] = useState<ProjectUpdate[]>([]);
+  const [access, setAccess] = useState<ProjectAccess[]>([]);
+  const [names, setNames] = useState<Record<string, string>>({});
+  const { user, role } = useAuth();
   const { toast } = useToast();
+
+  const isAdmin = role === 'admin' || role === 'manager';
+  const myAccess = access.find(a => a.user_id === user?.id);
+  const canManage = isAdmin || (!!myAccess && myAccess.can_edit && myAccess.role === 'admin');
+  const canAddLinks = isAdmin || (!!myAccess && myAccess.can_edit);
+
+  function canEditStage(stage: Stage) {
+    if (isAdmin) return true;
+    if (stage.assigned_to === user?.id) return true;
+    if (!myAccess || !myAccess.can_edit || myAccess.role === 'visualizador') return false;
+    if (myAccess.role === 'admin') return true;
+    return !stage.assigned_role || stage.assigned_role === (myAccess.role as any);
+  }
 
   const [form, setForm] = useState({
     title: '', type: 'photo' as any, priority: 'medium' as any, deadline: '',
