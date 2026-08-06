@@ -232,8 +232,54 @@ export default function ProjectDetail() {
           </div>
         </div>
 
+        <Tabs defaultValue="flow" className="space-y-6">
+          <TabsList className="flex w-full flex-wrap justify-start gap-1 bg-muted">
+            <TabsTrigger value="flow">Fluxo</TabsTrigger>
+            <TabsTrigger value="contents">Conteúdos</TabsTrigger>
+            <TabsTrigger value="links">Links</TabsTrigger>
+            <TabsTrigger value="history">Histórico</TabsTrigger>
+            <TabsTrigger value="access">Acesso</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="flow">
+            <StageTimeline
+              projectId={id!}
+              project={project}
+              stages={stages}
+              links={links}
+              canManage={canManage}
+              canEditStage={canEditStage}
+              onChange={loadProjectExtras}
+            />
+          </TabsContent>
+
+          <TabsContent value="links">
+            <ProjectLinksPanel
+              projectId={id!}
+              links={links}
+              stages={stages}
+              canEdit={canAddLinks}
+              onChange={loadProjectExtras}
+            />
+          </TabsContent>
+
+          <TabsContent value="history">
+            <ProjectUpdatesFeed updates={updates} stages={stages} names={names} />
+          </TabsContent>
+
+          <TabsContent value="access">
+            <ProjectAccessPanel
+              projectId={id!}
+              access={access}
+              canManage={canManage}
+              onChange={loadProjectExtras}
+            />
+          </TabsContent>
+
+          <TabsContent value="contents" className="space-y-6">
         {/* Content List Header */}
         <div className="flex items-center justify-between">
+
           <h2 className="font-display text-xl font-semibold text-foreground">
             Conteúdos ({contents.length})
           </h2>
