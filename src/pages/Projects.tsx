@@ -113,7 +113,12 @@ export default function Projects() {
     };
   }
 
-  const filtered = projects.filter(p =>
+  const isFinished = (p: Project) => p.status === 'completed' || p.status === 'cancelled';
+
+  const visible = projects.filter(p => (showArchived ? isFinished(p) : !isFinished(p)));
+  const finishedCount = projects.filter(isFinished).length;
+
+  const filtered = visible.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     p.clients?.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -121,15 +126,23 @@ export default function Projects() {
   return (
     <AppLayout>
       <div className="animate-fade-in space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="page-title">Projetos</h1>
-            <p className="text-muted-foreground">{projects.length} projetos</p>
+            <h1 className="page-title">{showArchived ? 'Projetos finalizados' : 'Projetos'}</h1>
+            <p className="text-muted-foreground">
+              {visible.length} {showArchived ? 'finalizados' : 'em andamento'}
+            </p>
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={() => setShowArchived(v => !v)}>
+              <Archive className="mr-2 h-4 w-4" />
+              {showArchived ? 'Ver projetos ativos' : `Ver finalizados (${finishedCount})`}
+            </Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button><Plus className="mr-2 h-4 w-4" /> Novo Projeto</Button>
             </DialogTrigger>
+
             <DialogContent className="bg-card border-border">
               <DialogHeader><DialogTitle className="text-foreground">Novo Projeto</DialogTitle></DialogHeader>
               <div className="space-y-4">
