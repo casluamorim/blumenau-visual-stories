@@ -222,14 +222,82 @@ export default function ProjectDetail() {
     <AppLayout>
       <div className="animate-fade-in space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <Link to="/projects">
             <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
           </Link>
-          <div>
+          <div className="min-w-0 flex-1">
             <h1 className="font-display text-3xl font-bold text-foreground">{project.name}</h1>
-            <p className="text-muted-foreground">{project.clients?.name}</p>
+            <p className="text-muted-foreground">
+              {project.clients?.name}
+              {(project.is_monthly || (project.cycle_number ?? 1) > 1) &&
+                ` · ${project.cycle_label || `Ciclo ${project.cycle_number ?? 1}`}`}
+            </p>
           </div>
+          {canManage && (
+            <Dialog open={editOpen} onOpenChange={o => { setEditOpen(o); if (o) openEdit(); }}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm"><Pencil className="mr-2 h-4 w-4" /> Editar projeto</Button>
+              </DialogTrigger>
+              <DialogContent className="bg-card border-border">
+                <DialogHeader><DialogTitle className="text-foreground">Editar projeto</DialogTitle></DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Nome do projeto *</Label>
+                    <Input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="bg-muted border-border" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Status</Label>
+                      <Select value={editForm.status} onValueChange={v => setEditForm({ ...editForm, status: v })}>
+                        <SelectTrigger className="bg-muted border-border"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="briefing">Briefing</SelectItem>
+                          <SelectItem value="in_progress">Em andamento</SelectItem>
+                          <SelectItem value="review">Revisão</SelectItem>
+                          <SelectItem value="delayed">Atrasado</SelectItem>
+                          <SelectItem value="paused">Pausado</SelectItem>
+                          <SelectItem value="completed">Concluído</SelectItem>
+                          <SelectItem value="cancelled">Cancelado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Prioridade</Label>
+                      <Select value={editForm.priority} onValueChange={v => setEditForm({ ...editForm, priority: v })}>
+                        <SelectTrigger className="bg-muted border-border"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Baixa</SelectItem>
+                          <SelectItem value="medium">Média</SelectItem>
+                          <SelectItem value="high">Alta</SelectItem>
+                          <SelectItem value="urgent">Urgente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Prazo</Label>
+                      <Input type="date" value={editForm.deadline} onChange={e => setEditForm({ ...editForm, deadline: e.target.value })} className="bg-muted border-border" />
+                    </div>
+                    <div>
+                      <Label>Rótulo do ciclo</Label>
+                      <Input placeholder="Ex: Agosto/2026" value={editForm.cycle_label} onChange={e => setEditForm({ ...editForm, cycle_label: e.target.value })} className="bg-muted border-border" />
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Checkbox
+                      checked={editForm.is_monthly}
+                      onCheckedChange={v => setEditForm({ ...editForm, is_monthly: !!v })}
+                    />
+                    Projeto mensal recorrente (social media) — o fluxo reinicia a cada ciclo
+                  </label>
+                  <div><Label>Descrição</Label><Textarea value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} className="bg-muted border-border" /></div>
+                  <Button onClick={saveProject} disabled={savingProject} className="w-full">Salvar alterações</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         <Tabs defaultValue="flow" className="space-y-6">
@@ -238,8 +306,14 @@ export default function ProjectDetail() {
             <TabsTrigger value="contents">Conteúdos</TabsTrigger>
             <TabsTrigger value="links">Links</TabsTrigger>
             <TabsTrigger value="history">Histórico</TabsTrigger>
+            <TabsTrigger value="alerts">Notificações</TabsTrigger>
             <TabsTrigger value="access">Acesso</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="alerts">
+            <NotificationsHistory projectId={id!} />
+          </TabsContent>
+
 
           <TabsContent value="flow">
             <StageTimeline
