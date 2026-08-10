@@ -250,7 +250,12 @@ export default function Projects() {
           })}
           {filtered.length === 0 && (
             <div className="col-span-full py-12 text-center text-muted-foreground">
-              {search ? 'Nenhum projeto encontrado.' : 'Nenhum projeto criado. Comece criando um!'}
+              {search
+                ? 'Nenhum projeto encontrado.'
+                : showArchived
+                  ? 'Nenhum projeto finalizado ainda.'
+                  : 'Nenhum projeto em andamento. Comece criando um!'}
+
             </div>
           )}
         </div>
