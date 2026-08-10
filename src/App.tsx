@@ -77,6 +77,8 @@ function AppRoutes() {
         <Route path="/quotes" element={<QuotesPage />} />
         <Route path="/tags" element={<TagsPage />} />
         <Route path="/activity" element={<ActivityPage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
+
         <Route path="/financial" element={<Financial />} />
         <Route path="/financial/personal" element={<FinancialPersonal />} />
         <Route path="/cashflow" element={<CashFlow />} />

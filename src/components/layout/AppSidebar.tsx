@@ -14,6 +14,8 @@ import {
   ChevronRight,
   Menu,
   ListChecks,
+  Bell,
+
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -35,6 +37,8 @@ const sections: NavSection[] = [
       { icon: ListChecks, label: 'Meu Trabalho', path: '/meu-trabalho' },
       { icon: FileCheck, label: 'Aprovações', path: '/contents' },
       { icon: FileText, label: 'Propostas', path: '/quotes' },
+      { icon: Bell, label: 'Notificações', path: '/notifications' },
+
     ],
   },
   {

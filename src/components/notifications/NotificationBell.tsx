@@ -118,6 +118,14 @@ export function NotificationBell() {
             );
           })}
         </ScrollArea>
+        <div className="border-t border-border p-2">
+          <Link to="/notifications" onClick={() => setOpen(false)}>
+            <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground">
+              Ver histórico completo
+            </Button>
+          </Link>
+        </div>
+
       </PopoverContent>
     </Popover>
   );
