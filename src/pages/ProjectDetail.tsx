@@ -15,7 +15,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import {
   Plus, ArrowLeft, CheckCircle, AlertTriangle, FileText, Upload,
-  Image, Video, Trash2, ExternalLink, Loader2, Link2
+  Image, Video, Trash2, ExternalLink, Loader2, Link2, Pencil
 } from 'lucide-react';
 import { getDrivePreviewUrl, isDriveUrl } from '@/lib/drive';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -23,6 +23,8 @@ import { StageTimeline } from '@/components/projects/StageTimeline';
 import { ProjectLinksPanel } from '@/components/projects/ProjectLinksPanel';
 import { ProjectUpdatesFeed } from '@/components/projects/ProjectUpdatesFeed';
 import { ProjectAccessPanel } from '@/components/projects/ProjectAccessPanel';
+import { NotificationsHistory } from '@/components/notifications/NotificationsHistory';
+
 import type { Database } from '@/integrations/supabase/types';
 
 type Content = Database['public']['Tables']['contents']['Row'];
