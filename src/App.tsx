@@ -21,6 +21,8 @@ const MyWork = lazy(() => import('./pages/MyWork'));
 const Contents = lazy(() => import('./pages/Contents'));
 const TagsPage = lazy(() => import('./pages/TagsPage'));
 const ActivityPage = lazy(() => import('./pages/ActivityPage'));
+const NotificationsPage = lazy(() => import('./pages/Notifications'));
+
 const ClientPortal = lazy(() => import('./pages/ClientPortal'));
 const AcceptInvite = lazy(() => import('./pages/AcceptInvite'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
@@ -75,6 +77,8 @@ function AppRoutes() {
         <Route path="/quotes" element={<QuotesPage />} />
         <Route path="/tags" element={<TagsPage />} />
         <Route path="/activity" element={<ActivityPage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
+
         <Route path="/financial" element={<Financial />} />
         <Route path="/financial/personal" element={<FinancialPersonal />} />
         <Route path="/cashflow" element={<CashFlow />} />

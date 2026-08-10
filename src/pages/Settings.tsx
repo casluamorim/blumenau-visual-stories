@@ -35,6 +35,9 @@ interface AgencySettings {
   next_invoice_number: number;
   default_revision_limit: number;
   default_invoice_due_days: number;
+  deadline_alert_days: number;
+  stalled_alert_hours: number;
+
   timezone: string;
   currency: string;
   asaas_account_1_label?: string | null;
@@ -539,7 +542,43 @@ export default function Settings() {
                         <SelectItem value="EUR">Euro (EUR)</SelectItem>
                       </SelectContent>
                     </Select>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <p className="font-medium text-foreground">Alertas de projeto</p>
+                  <p className="text-sm text-muted-foreground">
+                    Usados pela rotina diária que gera as notificações automáticas.
+                  </p>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label>Avisar quantos dias antes do prazo</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={60}
+                      value={settings.deadline_alert_days ?? 3}
+                      onChange={e => update('deadline_alert_days', parseInt(e.target.value) || 3)}
+                      disabled={!isAdmin}
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">Padrão: 3 dias.</p>
                   </div>
+                  <div>
+                    <Label>Fase parada: alertar após quantas horas</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={720}
+                      value={settings.stalled_alert_hours ?? 48}
+                      onChange={e => update('stalled_alert_hours', parseInt(e.target.value) || 48)}
+                      disabled={!isAdmin}
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">Padrão: 48 horas sem atualização.</p>
+                  </div>
+                </div>
+
                 </div>
                 <Button onClick={saveSettings} disabled={saving || !isAdmin}>
                   {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}

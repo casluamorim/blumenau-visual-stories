@@ -12,10 +12,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import {
-  Play, CheckCircle2, Circle, Clock, Plus, Trash2, ArrowRight, AlertTriangle, Timer,
+  Play, CheckCircle2, Circle, Clock, Plus, Trash2, ArrowRight, AlertTriangle, Timer, RotateCcw,
 } from 'lucide-react';
 import {
-  calculateProjectTiming, formatDuration, DEFAULT_STAGE_FLOW, STAGE_STATUS_CONFIG, STAGE_ROLE_LABELS,
+  calculateProjectTiming, formatDuration, STAGE_FLOW_PRESETS, STAGE_STATUS_CONFIG, STAGE_ROLE_LABELS,
 } from '@/lib/projectTiming';
 import { ProjectLinksPanel } from './ProjectLinksPanel';
 import type { Database } from '@/integrations/supabase/types';
@@ -26,7 +26,13 @@ type AppRole = Database['public']['Enums']['app_role'];
 
 interface Props {
   projectId: string;
-  project: { deadline: string | null; created_at?: string | null };
+  project: {
+    deadline: string | null;
+    created_at?: string | null;
+    is_monthly?: boolean | null;
+    cycle_number?: number | null;
+    cycle_label?: string | null;
+  };
   stages: Stage[];
   links: ProjectLink[];
   canManage: boolean;
@@ -40,7 +46,12 @@ export function StageTimeline({ projectId, project, stages, links, canManage, ca
   const [messages, setMessages] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [newStageOpen, setNewStageOpen] = useState(false);
+  const [flowOpen, setFlowOpen] = useState(false);
+  const [flowPreset, setFlowPreset] = useState('audiovisual');
+  const [cycleOpen, setCycleOpen] = useState(false);
+  const [cycleLabel, setCycleLabel] = useState('');
   const [newStage, setNewStage] = useState({ name: '', assigned_role: 'editor' as AppRole, expected_duration_hours: '' });
+
 
   const timing = calculateProjectTiming(project, stages);
   const ordered = timing.stages;
@@ -55,21 +66,55 @@ export function StageTimeline({ projectId, project, stages, links, canManage, ca
     });
   }
 
-  async function generateDefaultFlow() {
+  async function generateFlow() {
+    const preset = STAGE_FLOW_PRESETS.find(p => p.id === flowPreset) ?? STAGE_FLOW_PRESETS[0];
     setBusy('flow');
-    const rows = DEFAULT_STAGE_FLOW.map((s, i) => ({
+    const rows = preset.stages.map((s, i) => ({
       project_id: projectId,
       name: s.name,
-      order_index: i,
+      order_index: stages.length + i,
       assigned_role: s.assigned_role,
       expected_duration_hours: s.expected_duration_hours,
     }));
     const { error } = await supabase.from('project_stages').insert(rows);
     setBusy(null);
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
-    toast({ title: 'Fluxo padrão criado!' });
+    toast({ title: `Fluxo "${preset.label}" criado!` });
+    setFlowOpen(false);
     onChange();
   }
+
+  /** Fecha o ciclo atual (quem decide é a equipe, não a data) e reinicia as fases para o próximo mês. */
+  async function closeCycle() {
+    setBusy('cycle');
+    const nextNumber = (project.cycle_number ?? 1) + 1;
+    const label = cycleLabel.trim() || `Ciclo ${nextNumber}`;
+    const done = stages.filter(s => s.status === 'completed').length;
+
+    await logUpdate(
+      null,
+      `Ciclo "${project.cycle_label || `Ciclo ${project.cycle_number ?? 1}`}" encerrado pela equipe — ${done}/${stages.length} fases concluídas. Novo ciclo: ${label}.`,
+    );
+
+    const { error: upErr } = await supabase
+      .from('project_stages')
+      .update({ status: 'not_started', started_at: null, completed_at: null })
+      .eq('project_id', projectId);
+
+    const { error: projErr } = await supabase
+      .from('projects')
+      .update({ cycle_number: nextNumber, cycle_label: label, is_monthly: true, status: 'in_progress' })
+      .eq('id', projectId);
+
+    setBusy(null);
+    const error = upErr || projErr;
+    if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
+    setCycleLabel('');
+    setCycleOpen(false);
+    toast({ title: `Novo ciclo iniciado: ${label}` });
+    onChange();
+  }
+
 
   async function addStage() {
     if (!newStage.name.trim()) { toast({ title: 'Informe o nome da fase', variant: 'destructive' }); return; }
@@ -138,11 +183,75 @@ export function StageTimeline({ projectId, project, stages, links, canManage, ca
           <CardTitle className="text-lg text-foreground">Fluxo de trabalho</CardTitle>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className={timing.levelClass}>{timing.levelLabel}</Badge>
-            {canManage && stages.length === 0 && (
-              <Button size="sm" onClick={generateDefaultFlow} disabled={busy === 'flow'}>
-                <Plus className="mr-1 h-4 w-4" /> Gerar fluxo padrão
-              </Button>
+            {(project.is_monthly || (project.cycle_number ?? 1) > 1) && (
+              <Badge variant="outline" className="text-[10px]">
+                {project.cycle_label || `Ciclo ${project.cycle_number ?? 1}`}
+              </Badge>
             )}
+            {canManage && (
+              <Dialog open={flowOpen} onOpenChange={setFlowOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant={stages.length === 0 ? 'default' : 'outline'}>
+                    <Plus className="mr-1 h-4 w-4" /> {stages.length === 0 ? 'Gerar fluxo' : 'Add fluxo'}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-card border-border">
+                  <DialogHeader><DialogTitle className="text-foreground">Gerar fluxo de trabalho</DialogTitle></DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Tipo de fluxo</Label>
+                      <Select value={flowPreset} onValueChange={setFlowPreset}>
+                        <SelectTrigger className="bg-muted border-border"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {STAGE_FLOW_PRESETS.map(p => <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {STAGE_FLOW_PRESETS.find(p => p.id === flowPreset)?.description}
+                      </p>
+                    </div>
+                    <ul className="space-y-1 rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+                      {(STAGE_FLOW_PRESETS.find(p => p.id === flowPreset)?.stages ?? []).map((s, i) => (
+                        <li key={s.name}>
+                          {i + 1}. {s.name}
+                          {s.assigned_role && ` — ${STAGE_ROLE_LABELS[s.assigned_role] ?? s.assigned_role}`}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button onClick={generateFlow} disabled={busy === 'flow'} className="w-full">Criar fases</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+            {canManage && stages.length > 0 && (
+              <Dialog open={cycleOpen} onOpenChange={setCycleOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline"><RotateCcw className="mr-1 h-4 w-4" /> Fechar mês</Button>
+                </DialogTrigger>
+                <DialogContent className="bg-card border-border">
+                  <DialogHeader><DialogTitle className="text-foreground">Fechar ciclo e iniciar novo mês</DialogTitle></DialogHeader>
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      As fases voltam para "não iniciada" e o histórico do ciclo atual fica registrado no Histórico.
+                      Use quando a equipe decidir que o mês acabou — independente da data.
+                    </p>
+                    <div>
+                      <Label>Nome do novo ciclo</Label>
+                      <Input
+                        placeholder="Ex: Agosto/2026"
+                        value={cycleLabel}
+                        onChange={e => setCycleLabel(e.target.value)}
+                        className="bg-muted border-border"
+                      />
+                    </div>
+                    <Button onClick={closeCycle} disabled={busy === 'cycle'} className="w-full">
+                      Encerrar e iniciar novo ciclo
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+
             {canManage && stages.length > 0 && (
               <Dialog open={newStageOpen} onOpenChange={setNewStageOpen}>
                 <DialogTrigger asChild>

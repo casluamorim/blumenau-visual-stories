@@ -57,6 +57,7 @@ export type Database = {
           asaas_account_2_label: string | null
           created_at: string
           currency: string
+          deadline_alert_days: number
           default_invoice_due_days: number
           default_pix_key: string | null
           default_pix_key_type: string | null
@@ -68,6 +69,7 @@ export type Database = {
           pix_key_2: string | null
           pix_key_2_label: string | null
           pix_key_2_type: string | null
+          stalled_alert_hours: number
           timezone: string
           updated_at: string
           whatsapp_template: string
@@ -84,6 +86,7 @@ export type Database = {
           asaas_account_2_label?: string | null
           created_at?: string
           currency?: string
+          deadline_alert_days?: number
           default_invoice_due_days?: number
           default_pix_key?: string | null
           default_pix_key_type?: string | null
@@ -95,6 +98,7 @@ export type Database = {
           pix_key_2?: string | null
           pix_key_2_label?: string | null
           pix_key_2_type?: string | null
+          stalled_alert_hours?: number
           timezone?: string
           updated_at?: string
           whatsapp_template?: string
@@ -111,6 +115,7 @@ export type Database = {
           asaas_account_2_label?: string | null
           created_at?: string
           currency?: string
+          deadline_alert_days?: number
           default_invoice_due_days?: number
           default_pix_key?: string | null
           default_pix_key_type?: string | null
@@ -122,6 +127,7 @@ export type Database = {
           pix_key_2?: string | null
           pix_key_2_label?: string | null
           pix_key_2_type?: string | null
+          stalled_alert_hours?: number
           timezone?: string
           updated_at?: string
           whatsapp_template?: string
@@ -1331,9 +1337,12 @@ export type Database = {
           client_id: string
           created_at: string
           created_by: string | null
+          cycle_label: string | null
+          cycle_number: number
           deadline: string | null
           description: string | null
           id: string
+          is_monthly: boolean
           name: string
           priority: Database["public"]["Enums"]["priority_level"]
           status: Database["public"]["Enums"]["project_status"]
@@ -1343,9 +1352,12 @@ export type Database = {
           client_id: string
           created_at?: string
           created_by?: string | null
+          cycle_label?: string | null
+          cycle_number?: number
           deadline?: string | null
           description?: string | null
           id?: string
+          is_monthly?: boolean
           name: string
           priority?: Database["public"]["Enums"]["priority_level"]
           status?: Database["public"]["Enums"]["project_status"]
@@ -1355,9 +1367,12 @@ export type Database = {
           client_id?: string
           created_at?: string
           created_by?: string | null
+          cycle_label?: string | null
+          cycle_number?: number
           deadline?: string | null
           description?: string | null
           id?: string
+          is_monthly?: boolean
           name?: string
           priority?: Database["public"]["Enums"]["priority_level"]
           status?: Database["public"]["Enums"]["project_status"]
@@ -1527,6 +1542,10 @@ export type Database = {
       }
       can_edit_project_stage: {
         Args: { _stage_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_view_client_via_project: {
+        Args: { _client_id: string; _user_id: string }
         Returns: boolean
       }
       generate_unique_client_slug: {

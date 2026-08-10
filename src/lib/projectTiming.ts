@@ -152,8 +152,15 @@ export function calculateProjectTiming(project: ProjectLike, stages: ProjectStag
   };
 }
 
-export const DEFAULT_STAGE_FLOW: { name: string; assigned_role: Database['public']['Enums']['app_role'] | null; expected_duration_hours: number | null }[] = [
-  { name: 'Captação', assigned_role: 'social_media', expected_duration_hours: 8 },
+export type StageFlowItem = {
+  name: string;
+  assigned_role: Database['public']['Enums']['app_role'] | null;
+  expected_duration_hours: number | null;
+};
+
+/** Fluxo audiovisual (vídeo / edição) */
+export const DEFAULT_STAGE_FLOW: StageFlowItem[] = [
+  { name: 'Captação', assigned_role: 'editor', expected_duration_hours: 8 },
   { name: 'Decupagem', assigned_role: 'editor', expected_duration_hours: 4 },
   { name: 'Edição Bruta', assigned_role: 'editor', expected_duration_hours: 12 },
   { name: 'Revisão Interna', assigned_role: 'admin', expected_duration_hours: 4 },
@@ -161,6 +168,33 @@ export const DEFAULT_STAGE_FLOW: { name: string; assigned_role: Database['public
   { name: 'Aprovação Cliente', assigned_role: 'admin', expected_duration_hours: 24 },
   { name: 'Entrega Final', assigned_role: 'admin', expected_duration_hours: 2 },
 ];
+
+/** Fluxo social media (ciclo mensal de redes) — captação é do audiovisual e volta pra social */
+export const SOCIAL_MEDIA_STAGE_FLOW: StageFlowItem[] = [
+  { name: 'Planejamento do mês', assigned_role: 'social_media', expected_duration_hours: 4 },
+  { name: 'Roteiro', assigned_role: 'social_media', expected_duration_hours: 6 },
+  { name: 'Captação (Audiovisual)', assigned_role: 'editor', expected_duration_hours: 8 },
+  { name: 'Edição dos materiais', assigned_role: 'editor', expected_duration_hours: 12 },
+  { name: 'Montagem dos posts', assigned_role: 'social_media', expected_duration_hours: 6 },
+  { name: 'Aprovação Cliente', assigned_role: 'admin', expected_duration_hours: 24 },
+  { name: 'Agendamento / Postagem', assigned_role: 'social_media', expected_duration_hours: 3 },
+];
+
+export const STAGE_FLOW_PRESETS: { id: string; label: string; description: string; stages: StageFlowItem[] }[] = [
+  {
+    id: 'audiovisual',
+    label: 'Audiovisual',
+    description: 'Captação, decupagem, edição, aprovação e entrega.',
+    stages: DEFAULT_STAGE_FLOW,
+  },
+  {
+    id: 'social_media',
+    label: 'Social Media (mensal)',
+    description: 'Planejamento, roteiro, captação, edição, aprovação e postagem.',
+    stages: SOCIAL_MEDIA_STAGE_FLOW,
+  },
+];
+
 
 export const STAGE_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   not_started: { label: 'Não iniciada', color: 'bg-gray-500/10 text-gray-400 border-gray-500/20' },
