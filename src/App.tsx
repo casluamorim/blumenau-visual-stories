@@ -21,6 +21,8 @@ const MyWork = lazy(() => import('./pages/MyWork'));
 const Contents = lazy(() => import('./pages/Contents'));
 const TagsPage = lazy(() => import('./pages/TagsPage'));
 const ActivityPage = lazy(() => import('./pages/ActivityPage'));
+const NotificationsPage = lazy(() => import('./pages/Notifications'));
+
 const ClientPortal = lazy(() => import('./pages/ClientPortal'));
 const AcceptInvite = lazy(() => import('./pages/AcceptInvite'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
