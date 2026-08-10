@@ -35,6 +35,9 @@ interface AgencySettings {
   next_invoice_number: number;
   default_revision_limit: number;
   default_invoice_due_days: number;
+  deadline_alert_days: number;
+  stalled_alert_hours: number;
+
   timezone: string;
   currency: string;
   asaas_account_1_label?: string | null;
