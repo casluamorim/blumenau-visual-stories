@@ -13,7 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Search, Calendar, Copy, ArrowRight } from 'lucide-react';
+import { Plus, Search, Calendar, Copy, ArrowRight, Archive } from 'lucide-react';
 import { ClientCombobox } from '@/components/clients/ClientCombobox';
 import { calculateProjectTiming } from '@/lib/projectTiming';
 import { format, differenceInDays, isPast } from 'date-fns';
