@@ -183,11 +183,75 @@ export function StageTimeline({ projectId, project, stages, links, canManage, ca
           <CardTitle className="text-lg text-foreground">Fluxo de trabalho</CardTitle>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className={timing.levelClass}>{timing.levelLabel}</Badge>
-            {canManage && stages.length === 0 && (
-              <Button size="sm" onClick={generateDefaultFlow} disabled={busy === 'flow'}>
-                <Plus className="mr-1 h-4 w-4" /> Gerar fluxo padrão
-              </Button>
+            {(project.is_monthly || (project.cycle_number ?? 1) > 1) && (
+              <Badge variant="outline" className="text-[10px]">
+                {project.cycle_label || `Ciclo ${project.cycle_number ?? 1}`}
+              </Badge>
             )}
+            {canManage && (
+              <Dialog open={flowOpen} onOpenChange={setFlowOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant={stages.length === 0 ? 'default' : 'outline'}>
+                    <Plus className="mr-1 h-4 w-4" /> {stages.length === 0 ? 'Gerar fluxo' : 'Add fluxo'}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-card border-border">
+                  <DialogHeader><DialogTitle className="text-foreground">Gerar fluxo de trabalho</DialogTitle></DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Tipo de fluxo</Label>
+                      <Select value={flowPreset} onValueChange={setFlowPreset}>
+                        <SelectTrigger className="bg-muted border-border"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {STAGE_FLOW_PRESETS.map(p => <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {STAGE_FLOW_PRESETS.find(p => p.id === flowPreset)?.description}
+                      </p>
+                    </div>
+                    <ul className="space-y-1 rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+                      {(STAGE_FLOW_PRESETS.find(p => p.id === flowPreset)?.stages ?? []).map((s, i) => (
+                        <li key={s.name}>
+                          {i + 1}. {s.name}
+                          {s.assigned_role && ` — ${STAGE_ROLE_LABELS[s.assigned_role] ?? s.assigned_role}`}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button onClick={generateFlow} disabled={busy === 'flow'} className="w-full">Criar fases</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+            {canManage && stages.length > 0 && (
+              <Dialog open={cycleOpen} onOpenChange={setCycleOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline"><RotateCcw className="mr-1 h-4 w-4" /> Fechar mês</Button>
+                </DialogTrigger>
+                <DialogContent className="bg-card border-border">
+                  <DialogHeader><DialogTitle className="text-foreground">Fechar ciclo e iniciar novo mês</DialogTitle></DialogHeader>
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      As fases voltam para "não iniciada" e o histórico do ciclo atual fica registrado no Histórico.
+                      Use quando a equipe decidir que o mês acabou — independente da data.
+                    </p>
+                    <div>
+                      <Label>Nome do novo ciclo</Label>
+                      <Input
+                        placeholder="Ex: Agosto/2026"
+                        value={cycleLabel}
+                        onChange={e => setCycleLabel(e.target.value)}
+                        className="bg-muted border-border"
+                      />
+                    </div>
+                    <Button onClick={closeCycle} disabled={busy === 'cycle'} className="w-full">
+                      Encerrar e iniciar novo ciclo
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+
             {canManage && stages.length > 0 && (
               <Dialog open={newStageOpen} onOpenChange={setNewStageOpen}>
                 <DialogTrigger asChild>
