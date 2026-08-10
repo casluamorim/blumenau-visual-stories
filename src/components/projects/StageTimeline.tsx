@@ -66,21 +66,55 @@ export function StageTimeline({ projectId, project, stages, links, canManage, ca
     });
   }
 
-  async function generateDefaultFlow() {
+  async function generateFlow() {
+    const preset = STAGE_FLOW_PRESETS.find(p => p.id === flowPreset) ?? STAGE_FLOW_PRESETS[0];
     setBusy('flow');
-    const rows = DEFAULT_STAGE_FLOW.map((s, i) => ({
+    const rows = preset.stages.map((s, i) => ({
       project_id: projectId,
       name: s.name,
-      order_index: i,
+      order_index: stages.length + i,
       assigned_role: s.assigned_role,
       expected_duration_hours: s.expected_duration_hours,
     }));
     const { error } = await supabase.from('project_stages').insert(rows);
     setBusy(null);
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
-    toast({ title: 'Fluxo padrão criado!' });
+    toast({ title: `Fluxo "${preset.label}" criado!` });
+    setFlowOpen(false);
     onChange();
   }
+
+  /** Fecha o ciclo atual (quem decide é a equipe, não a data) e reinicia as fases para o próximo mês. */
+  async function closeCycle() {
+    setBusy('cycle');
+    const nextNumber = (project.cycle_number ?? 1) + 1;
+    const label = cycleLabel.trim() || `Ciclo ${nextNumber}`;
+    const done = stages.filter(s => s.status === 'completed').length;
+
+    await logUpdate(
+      null,
+      `Ciclo "${project.cycle_label || `Ciclo ${project.cycle_number ?? 1}`}" encerrado pela equipe — ${done}/${stages.length} fases concluídas. Novo ciclo: ${label}.`,
+    );
+
+    const { error: upErr } = await supabase
+      .from('project_stages')
+      .update({ status: 'not_started', started_at: null, completed_at: null })
+      .eq('project_id', projectId);
+
+    const { error: projErr } = await supabase
+      .from('projects')
+      .update({ cycle_number: nextNumber, cycle_label: label, is_monthly: true, status: 'in_progress' })
+      .eq('id', projectId);
+
+    setBusy(null);
+    const error = upErr || projErr;
+    if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
+    setCycleLabel('');
+    setCycleOpen(false);
+    toast({ title: `Novo ciclo iniciado: ${label}` });
+    onChange();
+  }
+
 
   async function addStage() {
     if (!newStage.name.trim()) { toast({ title: 'Informe o nome da fase', variant: 'destructive' }); return; }
