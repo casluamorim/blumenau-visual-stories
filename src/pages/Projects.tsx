@@ -45,6 +45,8 @@ export default function Projects() {
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+
   const { user } = useAuth();
   const { toast } = useToast();
 
