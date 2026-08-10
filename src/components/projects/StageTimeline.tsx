@@ -12,10 +12,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import {
-  Play, CheckCircle2, Circle, Clock, Plus, Trash2, ArrowRight, AlertTriangle, Timer,
+  Play, CheckCircle2, Circle, Clock, Plus, Trash2, ArrowRight, AlertTriangle, Timer, RotateCcw,
 } from 'lucide-react';
 import {
-  calculateProjectTiming, formatDuration, DEFAULT_STAGE_FLOW, STAGE_STATUS_CONFIG, STAGE_ROLE_LABELS,
+  calculateProjectTiming, formatDuration, STAGE_FLOW_PRESETS, STAGE_STATUS_CONFIG, STAGE_ROLE_LABELS,
 } from '@/lib/projectTiming';
 import { ProjectLinksPanel } from './ProjectLinksPanel';
 import type { Database } from '@/integrations/supabase/types';
@@ -26,7 +26,13 @@ type AppRole = Database['public']['Enums']['app_role'];
 
 interface Props {
   projectId: string;
-  project: { deadline: string | null; created_at?: string | null };
+  project: {
+    deadline: string | null;
+    created_at?: string | null;
+    is_monthly?: boolean | null;
+    cycle_number?: number | null;
+    cycle_label?: string | null;
+  };
   stages: Stage[];
   links: ProjectLink[];
   canManage: boolean;
@@ -40,7 +46,12 @@ export function StageTimeline({ projectId, project, stages, links, canManage, ca
   const [messages, setMessages] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [newStageOpen, setNewStageOpen] = useState(false);
+  const [flowOpen, setFlowOpen] = useState(false);
+  const [flowPreset, setFlowPreset] = useState('audiovisual');
+  const [cycleOpen, setCycleOpen] = useState(false);
+  const [cycleLabel, setCycleLabel] = useState('');
   const [newStage, setNewStage] = useState({ name: '', assigned_role: 'editor' as AppRole, expected_duration_hours: '' });
+
 
   const timing = calculateProjectTiming(project, stages);
   const ordered = timing.stages;
