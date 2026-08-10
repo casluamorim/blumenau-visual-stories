@@ -93,6 +93,46 @@ export default function ProjectDetail() {
     caption: '', internal_notes: '',
   });
 
+  const [editOpen, setEditOpen] = useState(false);
+  const [savingProject, setSavingProject] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '', status: 'briefing' as string, priority: 'medium' as string,
+    deadline: '', description: '', cycle_label: '', is_monthly: false,
+  });
+
+  function openEdit() {
+    if (!project) return;
+    setEditForm({
+      name: project.name,
+      status: project.status,
+      priority: project.priority,
+      deadline: project.deadline ?? '',
+      description: project.description ?? '',
+      cycle_label: (project as any).cycle_label ?? '',
+      is_monthly: !!(project as any).is_monthly,
+    });
+  }
+
+  async function saveProject() {
+    if (!editForm.name.trim()) { toast({ title: 'Informe o nome do projeto', variant: 'destructive' }); return; }
+    setSavingProject(true);
+    const { error } = await supabase.from('projects').update({
+      name: editForm.name.trim(),
+      status: editForm.status as any,
+      priority: editForm.priority as any,
+      deadline: editForm.deadline || null,
+      description: editForm.description.trim() || null,
+      cycle_label: editForm.cycle_label.trim() || null,
+      is_monthly: editForm.is_monthly,
+    }).eq('id', id!);
+    setSavingProject(false);
+    if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
+    toast({ title: 'Projeto atualizado!' });
+    setEditOpen(false);
+    loadData();
+  }
+
+
   useEffect(() => { if (id) loadData(); }, [id]);
 
   async function loadProjectExtras() {
