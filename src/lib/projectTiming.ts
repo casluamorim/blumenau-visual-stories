@@ -210,4 +210,11 @@ export const STAGE_ROLE_LABELS: Record<string, string> = {
   viewer: 'Visualizador',
   financeiro: 'Financeiro',
   client: 'Cliente',
+  fotografo: 'Fotógrafo',
+  gestor_anuncios: 'Gestor de Anúncios',
+  designer: 'Designer',
+  motion_designer: 'Motion Designer',
+  roteirista: 'Roteirista',
+  redator: 'Redator',
+  produtor: 'Produtor',
 };
