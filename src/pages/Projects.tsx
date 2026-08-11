@@ -16,6 +16,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, Calendar, Copy, ArrowRight, Archive } from 'lucide-react';
 import { ClientCombobox } from '@/components/clients/ClientCombobox';
 import { calculateProjectTiming } from '@/lib/projectTiming';
+import { useStageFlowPresets, applyFlowPreset } from '@/hooks/useStageFlowPresets';
+
 import { format, differenceInDays, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Database } from '@/integrations/supabase/types';
@@ -50,8 +52,10 @@ export default function Projects() {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  const { presets } = useStageFlowPresets();
+
   const [form, setForm] = useState({
-    name: '', client_id: '', status: 'briefing' as any, priority: 'medium' as any, deadline: '', description: '',
+    name: '', client_id: '', status: 'briefing' as any, priority: 'medium' as any, deadline: '', description: '', work_type: '',
   });
 
   useEffect(() => { loadData(); }, []);
@@ -75,17 +79,25 @@ export default function Projects() {
       toast({ title: 'Preencha nome e cliente', variant: 'destructive' });
       return;
     }
-    const { error } = await supabase.from('projects').insert({
+    const preset = presets.find(p => p.key === form.work_type);
+    const { data: created, error } = await supabase.from('projects').insert({
       ...form,
+      work_type: form.work_type || null,
       deadline: form.deadline || null,
+      is_monthly: preset?.key === 'social_media' ? true : undefined,
       created_by: user?.id,
-    });
+    } as any).select('id').single();
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
-    toast({ title: 'Projeto criado!' });
-    setForm({ name: '', client_id: '', status: 'briefing', priority: 'medium', deadline: '', description: '' });
+    if (preset && created) {
+      const stageError = await applyFlowPreset(created.id, preset);
+      if (stageError) toast({ title: 'Projeto criado, mas o fluxo falhou', description: stageError.message, variant: 'destructive' });
+    }
+    toast({ title: preset ? `Projeto criado com o fluxo "${preset.label}"` : 'Projeto criado!' });
+    setForm({ name: '', client_id: '', status: 'briefing', priority: 'medium', deadline: '', description: '', work_type: '' });
     setDialogOpen(false);
     loadData();
   }
+
 
   async function duplicateProject(project: Project) {
     const { error } = await supabase.from('projects').insert({
@@ -158,6 +170,20 @@ export default function Projects() {
                     onClientCreated={() => loadData()}
                   />
                 </div>
+                <div>
+                  <Label>Tipo de trabalho</Label>
+                  <Select value={form.work_type || 'none'} onValueChange={v => setForm({ ...form, work_type: v === 'none' ? '' : v })}>
+                    <SelectTrigger className="bg-muted border-border"><SelectValue placeholder="Sem fluxo" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem fluxo (criar fases depois)</SelectItem>
+                      {presets.map(p => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {presets.find(p => p.key === form.work_type)?.description ?? 'Aplica automaticamente as fases da área escolhida.'}
+                  </p>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Status</Label>
