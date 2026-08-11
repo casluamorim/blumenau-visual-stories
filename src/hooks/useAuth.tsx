@@ -56,8 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', user.id);
       if (cancelled) return;
       const roles = (data ?? []).map((r: any) => r.role as AppRole);
-      // Prioridade: admin > manager > financeiro > editor > social_media > viewer > client
-      const priority: AppRole[] = ['admin', 'manager', 'financeiro', 'editor', 'social_media', 'viewer', 'client'];
+      // Prioridade: admin > manager > financeiro > editor > social_media > outros criativos > viewer > client
+      const priority: AppRole[] = ['admin', 'manager', 'financeiro', 'editor', 'social_media', 'fotografo', 'gestor_anuncios', 'designer', 'motion_designer', 'roteirista', 'redator', 'produtor', 'viewer', 'client'];
       const picked = priority.find((p) => roles.includes(p)) ?? null;
       setRole(picked);
       setRoleLoading(false);
