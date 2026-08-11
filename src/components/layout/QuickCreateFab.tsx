@@ -40,7 +40,7 @@ export function QuickCreateFab() {
 
   // Forms
   const [clientForm, setClientForm] = useState({ name: '', company: '', email: '', phone: '' });
-  const [projForm, setProjForm] = useState({ name: '', client_id: '', priority: 'medium', deadline: '', description: '', template_id: '' });
+  const [projForm, setProjForm] = useState({ name: '', client_id: '', priority: 'medium', deadline: '', description: '', template_id: '', work_type: '' });
   const [contentForm, setContentForm] = useState({ title: '', client_id: '', project_id: '', type: 'photo', priority: 'medium', deadline: '' });
   const [invForm, setInvForm] = useState({ title: '', client_id: '', amount: '', due_date: '', notes: '' });
 
@@ -77,7 +77,7 @@ export function QuickCreateFab() {
   function reset() {
     setEntity(null);
     setClientForm({ name: '', company: '', email: '', phone: '' });
-    setProjForm({ name: '', client_id: '', priority: 'medium', deadline: '', description: '', template_id: '' });
+    setProjForm({ name: '', client_id: '', priority: 'medium', deadline: '', description: '', template_id: '', work_type: '' });
     setContentForm({ title: '', client_id: '', project_id: '', type: 'photo', priority: 'medium', deadline: '' });
     setInvForm({ title: '', client_id: '', amount: '', due_date: '', notes: '' });
   }
@@ -108,8 +108,10 @@ export function QuickCreateFab() {
       priority: (tpl?.default_priority ?? projForm.priority) as any,
       deadline: projForm.deadline || null,
       description: projForm.description || tpl?.description || null,
+      work_type: projForm.work_type || null,
+      is_monthly: projForm.work_type === 'social_media' ? true : undefined,
       created_by: user?.id,
-    }).select('id').single();
+    } as any).select('id').single();
 
     if (error || !project) {
       setSubmitting(false);
@@ -129,8 +131,11 @@ export function QuickCreateFab() {
       await supabase.from('contents').insert(rows);
     }
 
+    const preset = presets.find(p => p.key === projForm.work_type);
+    if (preset) await applyFlowPreset(project.id, preset);
+
     setSubmitting(false);
-    toast({ title: tpl ? `Projeto criado a partir do template "${tpl.name}"` : 'Projeto criado' });
+    toast({ title: preset ? `Projeto criado com o fluxo "${preset.label}"` : tpl ? `Projeto criado a partir do template "${tpl.name}"` : 'Projeto criado' });
     invalidate(); reset(); setOpen(false);
   }
 
@@ -245,6 +250,16 @@ export function QuickCreateFab() {
                 </Select>
               </div>
             )}
+            <div>
+              <Label>Tipo de trabalho</Label>
+              <Select value={projForm.work_type || 'none'} onValueChange={v => setProjForm({ ...projForm, work_type: v === 'none' ? '' : v })}>
+                <SelectTrigger><SelectValue placeholder="Sem fluxo" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem fluxo</SelectItem>
+                  {presets.map(p => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <div><Label>Nome *</Label><Input value={projForm.name} onChange={e => setProjForm({ ...projForm, name: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
               <div>
