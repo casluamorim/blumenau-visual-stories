@@ -20,6 +20,7 @@ import {
 import { UsersManagement } from '@/components/settings/UsersManagement';
 import { TagsManager } from '@/components/settings/TagsManager';
 import { TemplatesManager } from '@/components/settings/TemplatesManager';
+import { FlowPresetsManager } from '@/components/settings/FlowPresetsManager';
 
 interface AgencySettings {
   id: string;
@@ -253,6 +254,9 @@ export default function Settings() {
               <TabsTrigger value="templates" className="whitespace-nowrap">
                 <LayoutTemplate className="mr-2 h-4 w-4" />Templates
               </TabsTrigger>
+              <TabsTrigger value="flows" className="whitespace-nowrap">
+                Fluxos
+              </TabsTrigger>
               <TabsTrigger value="users" className="whitespace-nowrap">
                 <UsersIcon className="mr-2 h-4 w-4" />Usuários
               </TabsTrigger>
@@ -273,6 +277,10 @@ export default function Settings() {
           </TabsContent>
 
           {/* USUÁRIOS */}
+          <TabsContent value="flows" className="mt-6">
+            <FlowPresetsManager isAdmin={isAdmin} />
+          </TabsContent>
+
           <TabsContent value="users" className="mt-6">
             <UsersManagement isAdmin={isAdmin} />
           </TabsContent>

@@ -15,8 +15,9 @@ import {
   Play, CheckCircle2, Circle, Clock, Plus, Trash2, ArrowRight, AlertTriangle, Timer, RotateCcw,
 } from 'lucide-react';
 import {
-  calculateProjectTiming, formatDuration, STAGE_FLOW_PRESETS, STAGE_STATUS_CONFIG, STAGE_ROLE_LABELS,
+  calculateProjectTiming, formatDuration, STAGE_STATUS_CONFIG, STAGE_ROLE_LABELS,
 } from '@/lib/projectTiming';
+import { useStageFlowPresets, type FlowPreset } from '@/hooks/useStageFlowPresets';
 import { ProjectLinksPanel } from './ProjectLinksPanel';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -47,6 +48,7 @@ export function StageTimeline({ projectId, project, stages, links, canManage, ca
   const [busy, setBusy] = useState<string | null>(null);
   const [newStageOpen, setNewStageOpen] = useState(false);
   const [flowOpen, setFlowOpen] = useState(false);
+  const { presets: STAGE_FLOW_PRESETS_DB } = useStageFlowPresets();
   const [flowPreset, setFlowPreset] = useState('audiovisual');
   const [cycleOpen, setCycleOpen] = useState(false);
   const [cycleLabel, setCycleLabel] = useState('');
@@ -67,7 +69,7 @@ export function StageTimeline({ projectId, project, stages, links, canManage, ca
   }
 
   async function generateFlow() {
-    const preset = STAGE_FLOW_PRESETS.find(p => p.id === flowPreset) ?? STAGE_FLOW_PRESETS[0];
+    const preset = STAGE_FLOW_PRESETS_DB.find(p => p.key === flowPreset) ?? STAGE_FLOW_PRESETS_DB[0];
     setBusy('flow');
     const rows = preset.stages.map((s, i) => ({
       project_id: projectId,
@@ -203,15 +205,15 @@ export function StageTimeline({ projectId, project, stages, links, canManage, ca
                       <Select value={flowPreset} onValueChange={setFlowPreset}>
                         <SelectTrigger className="bg-muted border-border"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {STAGE_FLOW_PRESETS.map(p => <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>)}
+                          {STAGE_FLOW_PRESETS_DB.map(p => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {STAGE_FLOW_PRESETS.find(p => p.id === flowPreset)?.description}
+                        {STAGE_FLOW_PRESETS_DB.find(p => p.key === flowPreset)?.description}
                       </p>
                     </div>
                     <ul className="space-y-1 rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
-                      {(STAGE_FLOW_PRESETS.find(p => p.id === flowPreset)?.stages ?? []).map((s, i) => (
+                      {(STAGE_FLOW_PRESETS_DB.find(p => p.key === flowPreset)?.stages ?? []).map((s, i) => (
                         <li key={s.name}>
                           {i + 1}. {s.name}
                           {s.assigned_role && ` — ${STAGE_ROLE_LABELS[s.assigned_role] ?? s.assigned_role}`}
