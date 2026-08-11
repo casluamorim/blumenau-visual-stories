@@ -1627,7 +1627,18 @@ export type Database = {
         | "boleto"
         | "other"
       priority_level: "low" | "medium" | "high" | "urgent"
-      project_access_role: "admin" | "editor" | "social_media" | "visualizador"
+      project_access_role:
+        | "admin"
+        | "editor"
+        | "social_media"
+        | "visualizador"
+        | "fotografo"
+        | "gestor_anuncios"
+        | "designer"
+        | "motion_designer"
+        | "roteirista"
+        | "redator"
+        | "produtor"
       project_link_type: "drive" | "arquivo" | "referencia" | "outro"
       project_stage_status: "not_started" | "in_progress" | "completed"
       project_status:
@@ -1818,7 +1829,19 @@ export const Constants = {
         "other",
       ],
       priority_level: ["low", "medium", "high", "urgent"],
-      project_access_role: ["admin", "editor", "social_media", "visualizador"],
+      project_access_role: [
+        "admin",
+        "editor",
+        "social_media",
+        "visualizador",
+        "fotografo",
+        "gestor_anuncios",
+        "designer",
+        "motion_designer",
+        "roteirista",
+        "redator",
+        "produtor",
+      ],
       project_link_type: ["drive", "arquivo", "referencia", "outro"],
       project_stage_status: ["not_started", "in_progress", "completed"],
       project_status: [
