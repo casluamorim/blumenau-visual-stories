@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useStageFlowPresets } from '@/hooks/useStageFlowPresets';
 import { Bell, CheckCheck, Clock, AlertTriangle, CheckCircle2, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -23,8 +24,11 @@ const typeConfig: Record<string, { label: string; icon: any; color: string }> = 
 
 export function NotificationsHistory({ projectId }: { projectId?: string }) {
   const { user } = useAuth();
+  const { presets } = useStageFlowPresets(false);
   const [items, setItems] = useState<Notification[]>([]);
   const [projects, setProjects] = useState<Record<string, string>>({});
+  const [workTypes, setWorkTypes] = useState<Record<string, string>>({});
+  const [fWorkType, setFWorkType] = useState('all');
   const [stages, setStages] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
@@ -45,8 +49,9 @@ export function NotificationsHistory({ projectId }: { projectId?: string }) {
     const pIds = Array.from(new Set(rows.map(r => r.project_id).filter(Boolean) as string[]));
     const sIds = Array.from(new Set(rows.map(r => r.stage_id).filter(Boolean) as string[]));
     if (pIds.length) {
-      const { data: ps } = await supabase.from('projects').select('id, name').in('id', pIds);
-      setProjects(Object.fromEntries((ps ?? []).map(p => [p.id, p.name])));
+      const { data: ps } = await supabase.from('projects').select('id, name, work_type').in('id', pIds);
+      setProjects(Object.fromEntries((ps ?? []).map((p: any) => [p.id, p.name])));
+      setWorkTypes(Object.fromEntries((ps ?? []).map((p: any) => [p.id, p.work_type ?? ''])));
     }
     if (sIds.length) {
       const { data: ss } = await supabase.from('project_stages').select('id, name').in('id', sIds);
@@ -66,11 +71,12 @@ export function NotificationsHistory({ projectId }: { projectId?: string }) {
         if (fProject !== 'all' && n.project_id !== fProject) return false;
         if (fStage !== 'all' && n.stage_id !== fStage) return false;
         if (fType !== 'all' && n.type !== fType) return false;
+        if (fWorkType !== 'all' && (!n.project_id || workTypes[n.project_id] !== fWorkType)) return false;
         if (fRead === 'unread' && n.read) return false;
         if (fRead === 'read' && !n.read) return false;
         return true;
       }),
-    [items, fProject, fStage, fType, fRead],
+    [items, fProject, fStage, fType, fRead, fWorkType, workTypes],
   );
 
   const stageOptions = useMemo(() => {
@@ -112,7 +118,7 @@ export function NotificationsHistory({ projectId }: { projectId?: string }) {
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3 rounded-lg border border-border bg-muted/40 p-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 rounded-lg border border-border bg-muted/40 p-3 sm:grid-cols-2 lg:grid-cols-5">
           {!projectId && (
             <div>
               <Label className="text-xs">Projeto</Label>
@@ -134,6 +140,16 @@ export function NotificationsHistory({ projectId }: { projectId?: string }) {
               <SelectContent>
                 <SelectItem value="all">Todas as fases</SelectItem>
                 {stageOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">Área / fluxo</Label>
+            <Select value={fWorkType} onValueChange={setFWorkType}>
+              <SelectTrigger className="bg-muted border-border"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as áreas</SelectItem>
+                {presets.map(p => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
