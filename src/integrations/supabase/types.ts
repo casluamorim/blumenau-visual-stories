@@ -1347,6 +1347,7 @@ export type Database = {
           priority: Database["public"]["Enums"]["priority_level"]
           status: Database["public"]["Enums"]["project_status"]
           updated_at: string
+          work_type: string | null
         }
         Insert: {
           client_id: string
@@ -1362,6 +1363,7 @@ export type Database = {
           priority?: Database["public"]["Enums"]["priority_level"]
           status?: Database["public"]["Enums"]["project_status"]
           updated_at?: string
+          work_type?: string | null
         }
         Update: {
           client_id?: string
@@ -1377,6 +1379,7 @@ export type Database = {
           priority?: Database["public"]["Enums"]["priority_level"]
           status?: Database["public"]["Enums"]["project_status"]
           updated_at?: string
+          work_type?: string | null
         }
         Relationships: [
           {
@@ -1437,6 +1440,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      stage_flow_presets: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          key: string
+          label: string
+          order_index: number
+          stages: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key: string
+          label: string
+          order_index?: number
+          stages?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key?: string
+          label?: string
+          order_index?: number
+          stages?: Json
+          updated_at?: string
+        }
+        Relationships: []
       }
       tags: {
         Row: {
