@@ -16,6 +16,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, Calendar, Copy, ArrowRight, Archive } from 'lucide-react';
 import { ClientCombobox } from '@/components/clients/ClientCombobox';
 import { calculateProjectTiming } from '@/lib/projectTiming';
+import { useStageFlowPresets, applyFlowPreset } from '@/hooks/useStageFlowPresets';
+
 import { format, differenceInDays, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Database } from '@/integrations/supabase/types';
