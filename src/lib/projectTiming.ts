@@ -180,6 +180,60 @@ export const SOCIAL_MEDIA_STAGE_FLOW: StageFlowItem[] = [
   { name: 'Agendamento / Postagem', assigned_role: 'social_media', expected_duration_hours: 3 },
 ];
 
+/** Fluxo de fotografia (ensaio, evento, produto) */
+export const PHOTOGRAPHY_STAGE_FLOW: StageFlowItem[] = [
+  { name: 'Briefing', assigned_role: 'fotografo', expected_duration_hours: 2 },
+  { name: 'Planejamento de locação', assigned_role: 'fotografo', expected_duration_hours: 3 },
+  { name: 'Sessão de fotos', assigned_role: 'fotografo', expected_duration_hours: 6 },
+  { name: 'Seleção e edição', assigned_role: 'fotografo', expected_duration_hours: 8 },
+  { name: 'Revisão Interna', assigned_role: 'admin', expected_duration_hours: 2 },
+  { name: 'Aprovação Cliente', assigned_role: 'admin', expected_duration_hours: 24 },
+  { name: 'Entrega final', assigned_role: 'fotografo', expected_duration_hours: 2 },
+];
+
+/** Fluxo de gestão de anúncios / tráfego pago */
+export const ADS_STAGE_FLOW: StageFlowItem[] = [
+  { name: 'Briefing e objetivos', assigned_role: 'gestor_anuncios', expected_duration_hours: 2 },
+  { name: 'Estratégia de público e budget', assigned_role: 'gestor_anuncios', expected_duration_hours: 4 },
+  { name: 'Criação de criativos', assigned_role: 'designer', expected_duration_hours: 8 },
+  { name: 'Configuração da campanha', assigned_role: 'gestor_anuncios', expected_duration_hours: 4 },
+  { name: 'Veiculação e acompanhamento', assigned_role: 'gestor_anuncios', expected_duration_hours: 12 },
+  { name: 'Otimização', assigned_role: 'gestor_anuncios', expected_duration_hours: 6 },
+  { name: 'Relatório final', assigned_role: 'gestor_anuncios', expected_duration_hours: 3 },
+];
+
+/** Fluxo de design gráfico */
+export const DESIGN_STAGE_FLOW: StageFlowItem[] = [
+  { name: 'Briefing', assigned_role: 'designer', expected_duration_hours: 2 },
+  { name: 'Criação', assigned_role: 'designer', expected_duration_hours: 10 },
+  { name: 'Revisão Interna', assigned_role: 'admin', expected_duration_hours: 2 },
+  { name: 'Ajustes', assigned_role: 'designer', expected_duration_hours: 6 },
+  { name: 'Aprovação Cliente', assigned_role: 'admin', expected_duration_hours: 24 },
+  { name: 'Arquivos finais', assigned_role: 'designer', expected_duration_hours: 2 },
+];
+
+/** Fluxo de motion / animação */
+export const MOTION_STAGE_FLOW: StageFlowItem[] = [
+  { name: 'Roteiro', assigned_role: 'roteirista', expected_duration_hours: 4 },
+  { name: 'Storyboard / frames', assigned_role: 'designer', expected_duration_hours: 6 },
+  { name: 'Animação', assigned_role: 'motion_designer', expected_duration_hours: 16 },
+  { name: 'Revisão Interna', assigned_role: 'admin', expected_duration_hours: 4 },
+  { name: 'Ajustes', assigned_role: 'motion_designer', expected_duration_hours: 6 },
+  { name: 'Aprovação Cliente', assigned_role: 'admin', expected_duration_hours: 24 },
+  { name: 'Render final', assigned_role: 'motion_designer', expected_duration_hours: 3 },
+];
+
+/** Fluxo de produção de conteúdo (roteiro + gravação + edição) */
+export const CONTENT_PRODUCTION_STAGE_FLOW: StageFlowItem[] = [
+  { name: 'Pesquisa e pauta', assigned_role: 'redator', expected_duration_hours: 3 },
+  { name: 'Roteiro', assigned_role: 'roteirista', expected_duration_hours: 6 },
+  { name: 'Gravação / Captação', assigned_role: 'produtor', expected_duration_hours: 8 },
+  { name: 'Edição', assigned_role: 'editor', expected_duration_hours: 12 },
+  { name: 'Revisão', assigned_role: 'admin', expected_duration_hours: 4 },
+  { name: 'Aprovação Cliente', assigned_role: 'admin', expected_duration_hours: 24 },
+  { name: 'Publicação', assigned_role: 'social_media', expected_duration_hours: 2 },
+];
+
 export const STAGE_FLOW_PRESETS: { id: string; label: string; description: string; stages: StageFlowItem[] }[] = [
   {
     id: 'audiovisual',
@@ -192,6 +246,36 @@ export const STAGE_FLOW_PRESETS: { id: string; label: string; description: strin
     label: 'Social Media (mensal)',
     description: 'Planejamento, roteiro, captação, edição, aprovação e postagem.',
     stages: SOCIAL_MEDIA_STAGE_FLOW,
+  },
+  {
+    id: 'fotografia',
+    label: 'Fotografia',
+    description: 'Briefing, sessão, seleção, edição e entrega.',
+    stages: PHOTOGRAPHY_STAGE_FLOW,
+  },
+  {
+    id: 'gestao_anuncios',
+    label: 'Gestão de Anúncios',
+    description: 'Briefing, estratégia, criativos, campanha, otimização e relatório.',
+    stages: ADS_STAGE_FLOW,
+  },
+  {
+    id: 'design',
+    label: 'Design Gráfico',
+    description: 'Briefing, criação, revisão, ajustes e arquivos finais.',
+    stages: DESIGN_STAGE_FLOW,
+  },
+  {
+    id: 'motion',
+    label: 'Motion / Animação',
+    description: 'Roteiro, storyboard, animação, revisão e render final.',
+    stages: MOTION_STAGE_FLOW,
+  },
+  {
+    id: 'producao_conteudo',
+    label: 'Produção de Conteúdo',
+    description: 'Pesquisa, roteiro, captação, edição, aprovação e publicação.',
+    stages: CONTENT_PRODUCTION_STAGE_FLOW,
   },
 ];
 
@@ -210,4 +294,11 @@ export const STAGE_ROLE_LABELS: Record<string, string> = {
   viewer: 'Visualizador',
   financeiro: 'Financeiro',
   client: 'Cliente',
+  fotografo: 'Fotógrafo',
+  gestor_anuncios: 'Gestor de Anúncios',
+  designer: 'Designer',
+  motion_designer: 'Motion Designer',
+  roteirista: 'Roteirista',
+  redator: 'Redator',
+  produtor: 'Produtor',
 };

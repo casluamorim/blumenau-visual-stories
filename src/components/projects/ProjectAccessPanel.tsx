@@ -19,6 +19,13 @@ const roleLabels: Record<AccessRole, string> = {
   editor: 'Editor',
   social_media: 'Social Media',
   visualizador: 'Visualizador',
+  fotografo: 'Fotógrafo',
+  gestor_anuncios: 'Gestor de Anúncios',
+  designer: 'Designer',
+  motion_designer: 'Motion Designer',
+  roteirista: 'Roteirista',
+  redator: 'Redator',
+  produtor: 'Produtor',
 };
 
 export function ProjectAccessPanel({

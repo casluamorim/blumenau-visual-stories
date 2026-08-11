@@ -270,6 +270,13 @@ export function StageTimeline({ projectId, project, stages, links, canManage, ca
                             <SelectItem value="admin">Admin</SelectItem>
                             <SelectItem value="editor">Editor</SelectItem>
                             <SelectItem value="social_media">Social Media</SelectItem>
+                            <SelectItem value="fotografo">Fotógrafo</SelectItem>
+                            <SelectItem value="gestor_anuncios">Gestor de Anúncios</SelectItem>
+                            <SelectItem value="designer">Designer</SelectItem>
+                            <SelectItem value="motion_designer">Motion Designer</SelectItem>
+                            <SelectItem value="roteirista">Roteirista</SelectItem>
+                            <SelectItem value="redator">Redator</SelectItem>
+                            <SelectItem value="produtor">Produtor</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

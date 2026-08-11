@@ -26,14 +26,21 @@ import {
 } from 'lucide-react';
 import { logAudit } from '@/lib/auditLog';
 
-type AppRole = 'admin' | 'manager' | 'editor' | 'viewer' | 'financeiro' | 'social_media';
+type AppRole = 'admin' | 'manager' | 'editor' | 'viewer' | 'financeiro' | 'social_media' | 'fotografo' | 'gestor_anuncios' | 'designer' | 'motion_designer' | 'roteirista' | 'redator' | 'produtor';
 
 const ROLE_OPTIONS: { value: AppRole; label: string; description: string }[] = [
   { value: 'admin', label: 'Admin', description: 'Acesso total ao sistema' },
   { value: 'manager', label: 'Gestor', description: 'Gerencia clientes vinculados e tarefas' },
   { value: 'financeiro', label: 'Financeiro', description: 'Acesso total ao financeiro' },
-  { value: 'social_media', label: 'Social Media', description: 'Apenas clientes vinculados' },
-  { value: 'editor', label: 'Editor', description: 'Edita projetos e conteúdos vinculados' },
+  { value: 'social_media', label: 'Social Media', description: 'Projetos de redes sociais vinculados' },
+  { value: 'editor', label: 'Editor', description: 'Edição de vídeo e projetos vinculados' },
+  { value: 'fotografo', label: 'Fotógrafo', description: 'Ensaios, eventos e produtos' },
+  { value: 'gestor_anuncios', label: 'Gestor de Anúncios', description: 'Tráfego pago e campanhas' },
+  { value: 'designer', label: 'Designer', description: 'Design gráfico e identidade visual' },
+  { value: 'motion_designer', label: 'Motion Designer', description: 'Animação e motion' },
+  { value: 'roteirista', label: 'Roteirista', description: 'Roteiros para vídeo e conteúdo' },
+  { value: 'redator', label: 'Redator', description: 'Textos e pautas' },
+  { value: 'produtor', label: 'Produtor', description: 'Produção e captação' },
   { value: 'viewer', label: 'Visualizador', description: 'Apenas leitura' },
 ];
 
@@ -43,6 +50,13 @@ const ROLE_LABEL: Record<AppRole, string> = {
   financeiro: 'Financeiro',
   social_media: 'Social Media',
   editor: 'Editor',
+  fotografo: 'Fotógrafo',
+  gestor_anuncios: 'Gestor de Anúncios',
+  designer: 'Designer',
+  motion_designer: 'Motion Designer',
+  roteirista: 'Roteirista',
+  redator: 'Redator',
+  produtor: 'Produtor',
   viewer: 'Visualizador',
 };
 

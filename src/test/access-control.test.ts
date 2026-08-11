@@ -20,7 +20,14 @@ type AppRole =
   | "editor"
   | "viewer"
   | "financeiro"
-  | "social_media";
+  | "social_media"
+  | "fotografo"
+  | "gestor_anuncios"
+  | "designer"
+  | "motion_designer"
+  | "roteirista"
+  | "redator"
+  | "produtor";
 
 interface User {
   id: string;
