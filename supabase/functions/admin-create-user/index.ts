@@ -15,10 +15,12 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ??
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 type AppRole =
-  | "admin" | "manager" | "editor" | "viewer" | "financeiro" | "social_media";
+  | "admin" | "manager" | "editor" | "viewer" | "financeiro" | "social_media"
+  | "fotografo" | "gestor_anuncios" | "designer" | "motion_designer" | "roteirista" | "redator" | "produtor";
 
 const VALID_ROLES: AppRole[] = [
   "admin", "manager", "editor", "viewer", "financeiro", "social_media",
+  "fotografo", "gestor_anuncios", "designer", "motion_designer", "roteirista", "redator", "produtor",
 ];
 
 interface Body {
