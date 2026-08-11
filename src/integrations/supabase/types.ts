@@ -1589,6 +1589,13 @@ export type Database = {
         | "financeiro"
         | "social_media"
         | "client"
+        | "fotografo"
+        | "gestor_anuncios"
+        | "designer"
+        | "motion_designer"
+        | "roteirista"
+        | "redator"
+        | "produtor"
       client_status: "active" | "inactive" | "prospect"
       content_status:
         | "draft"
@@ -1768,6 +1775,13 @@ export const Constants = {
         "financeiro",
         "social_media",
         "client",
+        "fotografo",
+        "gestor_anuncios",
+        "designer",
+        "motion_designer",
+        "roteirista",
+        "redator",
+        "produtor",
       ],
       client_status: ["active", "inactive", "prospect"],
       content_status: [
