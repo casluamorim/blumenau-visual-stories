@@ -170,6 +170,20 @@ export default function Projects() {
                     onClientCreated={() => loadData()}
                   />
                 </div>
+                <div>
+                  <Label>Tipo de trabalho</Label>
+                  <Select value={form.work_type || 'none'} onValueChange={v => setForm({ ...form, work_type: v === 'none' ? '' : v })}>
+                    <SelectTrigger className="bg-muted border-border"><SelectValue placeholder="Sem fluxo" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem fluxo (criar fases depois)</SelectItem>
+                      {presets.map(p => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {presets.find(p => p.key === form.work_type)?.description ?? 'Aplica automaticamente as fases da área escolhida.'}
+                  </p>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Status</Label>
