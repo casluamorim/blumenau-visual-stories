@@ -29,6 +29,8 @@ export function QuickCreateFab() {
   const { toast } = useToast();
   const location = useLocation();
   const qc = useQueryClient();
+  const { presets } = useStageFlowPresets();
+
 
   // Detect client_id from URL when on /clients/:id
   const clientIdFromRoute = (() => {
