@@ -14,8 +14,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { InlineEdit } from '@/components/InlineEdit';
 import { ClientCombobox, ComboClient } from '@/components/clients/ClientCombobox';
+import { useUrlState } from '@/hooks/usePersistedState';
+import { createProjectFromQuote, createReceivableForProject, type CreatedProject } from '@/lib/quoteAutomation';
+import { PaymentScheduleDialog } from '@/components/finance/ProjectPaymentDialogs';
 import {
-  Plus, FileText, Receipt, Trash2, Edit, AlertTriangle, CheckCircle, Clock, XCircle, Search,
+  Plus, FileText, Receipt, Trash2, Edit, AlertTriangle, CheckCircle, Clock, XCircle, Search, ThumbsUp,
 } from 'lucide-react';
 
 interface Quote {
