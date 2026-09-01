@@ -76,6 +76,9 @@ export default function Quotes() {
   const [invoiceFor, setInvoiceFor] = useState<Quote | null>(null);
   const [invDueDate, setInvDueDate] = useState('');
 
+  // Automação: proposta aceita → projeto + decisão de pagamento
+  const [pendingProject, setPendingProject] = useState<CreatedProject | null>(null);
+
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
