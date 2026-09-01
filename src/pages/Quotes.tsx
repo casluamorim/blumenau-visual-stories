@@ -61,7 +61,7 @@ export default function Quotes() {
   const { user } = useAuth();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [clients, setClients] = useState<ComboClient[]>([]);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useUrlState('q', '');
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState<Quote | null>(null);
 
