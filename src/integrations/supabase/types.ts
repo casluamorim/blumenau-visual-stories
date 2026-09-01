@@ -1344,7 +1344,11 @@ export type Database = {
           id: string
           is_monthly: boolean
           name: string
+          payment_amount: number | null
+          payment_pending: boolean
+          payment_trigger: string | null
           priority: Database["public"]["Enums"]["priority_level"]
+          quote_id: string | null
           status: Database["public"]["Enums"]["project_status"]
           updated_at: string
           work_type: string | null
@@ -1360,7 +1364,11 @@ export type Database = {
           id?: string
           is_monthly?: boolean
           name: string
+          payment_amount?: number | null
+          payment_pending?: boolean
+          payment_trigger?: string | null
           priority?: Database["public"]["Enums"]["priority_level"]
+          quote_id?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           updated_at?: string
           work_type?: string | null
@@ -1376,7 +1384,11 @@ export type Database = {
           id?: string
           is_monthly?: boolean
           name?: string
+          payment_amount?: number | null
+          payment_pending?: boolean
+          payment_trigger?: string | null
           priority?: Database["public"]["Enums"]["priority_level"]
+          quote_id?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           updated_at?: string
           work_type?: string | null
@@ -1387,6 +1399,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
         ]
