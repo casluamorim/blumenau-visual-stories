@@ -14,8 +14,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { InlineEdit } from '@/components/InlineEdit';
 import { ClientCombobox, ComboClient } from '@/components/clients/ClientCombobox';
+import { useUrlState } from '@/hooks/usePersistedState';
+import { createProjectFromQuote, createReceivableForProject, type CreatedProject } from '@/lib/quoteAutomation';
+import { PaymentScheduleDialog } from '@/components/finance/ProjectPaymentDialogs';
 import {
-  Plus, FileText, Receipt, Trash2, Edit, AlertTriangle, CheckCircle, Clock, XCircle, Search,
+  Plus, FileText, Receipt, Trash2, Edit, AlertTriangle, CheckCircle, Clock, XCircle, Search, ThumbsUp,
 } from 'lucide-react';
 
 interface Quote {
@@ -58,7 +61,7 @@ export default function Quotes() {
   const { user } = useAuth();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [clients, setClients] = useState<ComboClient[]>([]);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useUrlState('q', '');
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState<Quote | null>(null);
 
@@ -72,6 +75,9 @@ export default function Quotes() {
   // Gerar fatura
   const [invoiceFor, setInvoiceFor] = useState<Quote | null>(null);
   const [invDueDate, setInvDueDate] = useState('');
+
+  // Automação: proposta aceita → projeto + decisão de pagamento
+  const [pendingProject, setPendingProject] = useState<CreatedProject | null>(null);
 
   useEffect(() => { loadData(); }, []);
 
@@ -107,13 +113,71 @@ export default function Quotes() {
       notes: qNotes || null, valid_until: qValidUntil || null, status: qStatus as any,
       created_by: user?.id,
     };
-    const { error } = editing
-      ? await supabase.from('quotes').update(payload).eq('id', editing.id)
-      : await supabase.from('quotes').insert(payload);
+    const { data: saved, error } = editing
+      ? await supabase.from('quotes').update(payload).eq('id', editing.id).select('*').single()
+      : await supabase.from('quotes').insert(payload).select('*').single();
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
     toast({ title: editing ? 'Proposta atualizada!' : 'Proposta criada!' });
     setShowDialog(false);
-    loadData();
+    const becameAccepted = qStatus === 'accepted' && (!editing || editing.status !== 'accepted');
+    await loadData();
+    if (becameAccepted && saved) await runAcceptance(saved as any);
+  }
+
+  /** Proposta aceita → cria projeto + tarefa e pergunta quando o pagamento entra. */
+  async function runAcceptance(q: Quote) {
+    const { project, error, alreadyExists } = await createProjectFromQuote(
+      { id: q.id, client_id: q.client_id, title: q.title, total_value: Number(q.total_value), notes: q.notes, services: q.services },
+      user?.id,
+    );
+    if (error || !project) {
+      toast({ title: 'Erro ao criar projeto', description: error?.message, variant: 'destructive' });
+      return;
+    }
+    if (alreadyExists) {
+      toast({ title: 'Projeto já existe', description: `"${project.name}" já foi criado a partir desta proposta.` });
+      return;
+    }
+    toast({ title: 'Projeto criado!', description: 'Também entrou em Meu Trabalho como tarefa ativa.' });
+    setPendingProject(project);
+  }
+
+  async function approveQuote(q: Quote) {
+    const { error } = await supabase.from('quotes').update({ status: 'accepted' as any }).eq('id', q.id);
+    if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
+    await loadData();
+    await runAcceptance(q);
+  }
+
+  async function schedulePayment(dueDate: string) {
+    if (!pendingProject) return;
+    const { error } = await createReceivableForProject({
+      clientId: pendingProject.client_id,
+      projectId: pendingProject.id,
+      quoteId: pendingProject.quote_id,
+      title: pendingProject.name,
+      amount: Number(pendingProject.payment_amount || 0),
+      dueDate,
+      userId: user?.id,
+    });
+    if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
+    await supabase.from('projects')
+      .update({ payment_trigger: 'scheduled', payment_pending: false } as any)
+      .eq('id', pendingProject.id);
+    toast({ title: 'Lançado em Contas a Receber (Financeiro PJ)' });
+    setPendingProject(null);
+  }
+
+  async function markPaymentOnDelivery() {
+    if (!pendingProject) return;
+    await supabase.from('projects')
+      .update({ payment_trigger: 'on_delivery', payment_pending: false } as any)
+      .eq('id', pendingProject.id);
+    toast({
+      title: 'Pagamento após a entrega',
+      description: 'Ao finalizar a tarefa em Meu Trabalho você confirma valor e data.',
+    });
+    setPendingProject(null);
   }
 
   async function remove(id: string) {
