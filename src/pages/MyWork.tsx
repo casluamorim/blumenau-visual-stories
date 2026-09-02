@@ -173,16 +173,29 @@ export default function MyWork() {
                     </div>
                   )}
 
-                  <Link to={`/projects/${project.id}`}>
-                    <Button className="w-full">
-                      <Play className="mr-2 h-4 w-4" /> Abrir fluxo <ArrowRight className="ml-2 h-4 w-4" />
+                  <div className="flex flex-col gap-2">
+                    <Link to={`/projects/${project.id}`}>
+                      <Button className="w-full">
+                        <Play className="mr-2 h-4 w-4" /> Abrir fluxo <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </Link>
+                    <Button variant="outline" className="w-full" onClick={() => finishProject(project)}>
+                      <CheckCircle2 className="mr-2 h-4 w-4" /> Finalizar projeto
                     </Button>
-                  </Link>
+                  </div>
                 </CardContent>
               </Card>
             );
           })}
         </div>
+
+        <DeliveryPaymentDialog
+          open={!!payTarget}
+          onOpenChange={(o) => { if (!o) setPayTarget(null); }}
+          projectName={payTarget?.name ?? ''}
+          defaultAmount={Number((payTarget as any)?.payment_amount || 0)}
+          onConfirm={confirmDeliveryPayment}
+        />
       </div>
     </AppLayout>
   );
