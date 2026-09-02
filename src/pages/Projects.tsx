@@ -149,7 +149,7 @@ export default function Projects() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" onClick={() => setShowArchived(v => !v)}>
+            <Button variant="outline" onClick={() => setShowArchived(!showArchived)}>
               <Archive className="mr-2 h-4 w-4" />
               {showArchived ? 'Ver projetos ativos' : `Ver finalizados (${finishedCount})`}
             </Button>
