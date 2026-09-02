@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useUrlState } from '@/hooks/usePersistedState';
 import {
   Plus, DollarSign, FileText, Receipt, Trash2, Edit, AlertTriangle,
   CheckCircle, Clock, XCircle, TrendingUp, TrendingDown, Search,
