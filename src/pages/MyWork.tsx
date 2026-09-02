@@ -22,9 +22,9 @@ type Stage = Database['public']['Tables']['project_stages']['Row'];
 export default function MyWork() {
   const { user, role } = useAuth();
   const { toast } = useToast();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [stages, setStages] = useState<Stage[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [projects, setProjects] = useCachedState<Project[]>('mywork:projects', []);
+  const [stages, setStages] = useCachedState<Stage[]>('mywork:stages', []);
+  const [loading, setLoading] = useState(!hasPageCache('mywork:projects'));
   const [payTarget, setPayTarget] = useState<Project | null>(null);
 
   useEffect(() => { if (user) load(); /* eslint-disable-next-line */ }, [user?.id]);
