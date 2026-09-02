@@ -2,8 +2,10 @@ import { ReactNode } from 'react';
 import { AppSidebar } from './AppSidebar';
 import { QuickCreateFab } from './QuickCreateFab';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { useScrollRestoration } from '@/hooks/usePersistedState';
 
 export function AppLayout({ children }: { children: ReactNode }) {
+  useScrollRestoration();
   return (
     <div className="dark min-h-screen bg-background">
       <AppSidebar />

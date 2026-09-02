@@ -50,6 +50,7 @@ const typeLabels: Record<string, string> = {
 };
 
 export default function ClientDetail() {
+  const [tab, setTab] = useUrlState('tab', 'overview');
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { toast } = useToast();

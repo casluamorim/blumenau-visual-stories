@@ -61,6 +61,7 @@ interface ContentFile {
 }
 
 export default function ProjectDetail() {
+  const [tab, setTab] = useUrlState('tab', 'flow');
   const { id } = useParams<{ id: string }>();
   const [project, setProject] = useState<(Project & { clients: { name: string } | null }) | null>(null);
   const [contents, setContents] = useState<Content[]>([]);
