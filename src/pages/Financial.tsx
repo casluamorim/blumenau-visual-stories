@@ -147,6 +147,7 @@ function clientSelectLabel(c: Client) {
 }
 
 export default function Financial() {
+  const [tab, setTab] = useUrlState('tab', 'invoices');
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
