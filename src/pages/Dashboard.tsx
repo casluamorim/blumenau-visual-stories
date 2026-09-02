@@ -86,7 +86,9 @@ const periodDays: Record<Period, number> = { '7d': 7, '30d': 30, month: 30, quar
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [period, setPeriod] = useState<Period>('30d');
+  const [periodRaw, setPeriodRaw] = useUrlState('period', '30d');
+  const period = periodRaw as Period;
+  const setPeriod = (p: Period) => setPeriodRaw(p);
   const [ops, setOps] = useState<OpsStats>({ activeClients: 0, activeProjects: 0, pendingApprovals: 0, overdueTasks: 0 });
   const [fin, setFin] = useState<FinStats>({ revenueMonth: 0, revenuePrevMonth: 0, receivables: 0, expensesMonth: 0, expensesPrevMonth: 0 });
   const [cashflow, setCashflow] = useState<{ date: string; entrada: number; saida: number }[]>([]);
