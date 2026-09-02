@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
+import { useUrlState } from '@/hooks/usePersistedState';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -342,7 +343,7 @@ export default function ProjectDetail() {
           )}
         </div>
 
-        <Tabs defaultValue="flow" className="space-y-6">
+        <Tabs value={tab} onValueChange={setTab} className="space-y-6">
           <TabsList className="flex w-full flex-wrap justify-start gap-1 bg-muted">
             <TabsTrigger value="flow">Fluxo</TabsTrigger>
             <TabsTrigger value="contents">Conteúdos</TabsTrigger>
