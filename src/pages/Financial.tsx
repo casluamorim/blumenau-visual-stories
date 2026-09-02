@@ -611,7 +611,7 @@ export default function Financial() {
 
 
         {/* Tabs */}
-        <Tabs defaultValue="invoices" className="space-y-4">
+        <Tabs value={tab} onValueChange={setTab} className="space-y-4">
           <div className="flex items-start sm:items-center justify-between gap-3 flex-col sm:flex-row">
             <TabsList className="w-full sm:w-auto overflow-x-auto">
               <TabsTrigger value="invoices">Receitas</TabsTrigger>
