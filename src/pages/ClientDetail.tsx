@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+import { useUrlState } from '@/hooks/usePersistedState';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -49,6 +50,7 @@ const typeLabels: Record<string, string> = {
 };
 
 export default function ClientDetail() {
+  const [tab, setTab] = useUrlState('tab', 'overview');
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -216,7 +218,7 @@ export default function ClientDetail() {
           </div>
         </div>
 
-        <Tabs defaultValue="overview">
+        <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
             <TabsTrigger value="overview">Visão geral</TabsTrigger>
             <TabsTrigger value="projects">Projetos</TabsTrigger>

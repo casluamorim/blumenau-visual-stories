@@ -22,6 +22,7 @@ import { format, subDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay
 import { ptBR } from 'date-fns/locale';
 import { expandOccurrencesForMonth } from '@/lib/financialMonthly';
 import { ClientNotificationsCard } from '@/components/dashboard/ClientNotificationsCard';
+import { useUrlState } from '@/hooks/usePersistedState';
 
 
 type Period = '7d' | '30d' | 'month' | 'quarter' | 'year';
@@ -48,7 +49,7 @@ interface FinStats {
 
 interface AttentionItem {
   id: string;
-  kind: 'approval' | 'invoice_due' | 'overdue_task' | 'quote_pending' | 'meeting';
+  kind: 'approval' | 'invoice_due' | 'overdue_task' | 'quote_pending' | 'meeting' | 'payment_pending';
   icon: any;
   title: string;
   subtitle: string;
@@ -86,7 +87,9 @@ const periodDays: Record<Period, number> = { '7d': 7, '30d': 30, month: 30, quar
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [period, setPeriod] = useState<Period>('30d');
+  const [periodRaw, setPeriodRaw] = useUrlState('period', '30d');
+  const period = periodRaw as Period;
+  const setPeriod = (p: Period) => setPeriodRaw(p);
   const [ops, setOps] = useState<OpsStats>({ activeClients: 0, activeProjects: 0, pendingApprovals: 0, overdueTasks: 0 });
   const [fin, setFin] = useState<FinStats>({ revenueMonth: 0, revenuePrevMonth: 0, receivables: 0, expensesMonth: 0, expensesPrevMonth: 0 });
   const [cashflow, setCashflow] = useState<{ date: string; entrada: number; saida: number }[]>([]);
@@ -236,12 +239,20 @@ export default function Dashboard() {
     const today = new Date().toISOString().split('T')[0];
     const in7 = addDays(new Date(), 7).toISOString().split('T')[0];
 
-    const [approvals, dueInvoices, overdueTasks, pendingQuotes] = await Promise.all([
+    const [approvals, dueInvoices, overdueTasks, pendingQuotes, pendingPayments] = await Promise.all([
       supabase.from('contents').select('id, title, project_id, projects(name, clients(name, company))').eq('status', 'in_review').limit(10),
       supabase.from('invoices').select('id, title, due_date, amount, clients(name, company)').eq('status', 'pending').lte('due_date', in7).limit(10),
       supabase.from('contents').select('id, title, deadline, project_id, projects(name, clients(name, company))').lt('deadline', today).not('status', 'in', '("approved","published")').not('deadline', 'is', null).limit(10),
       supabase.from('quotes').select('id, title, clients(name, company)').eq('status', 'sent').limit(10),
+      supabase.from('projects').select('id, name, payment_amount, clients(name, company)').eq('payment_pending', true).limit(10),
     ]);
+
+    (pendingPayments.data ?? []).forEach((p: any) => items.push({
+      id: `pay-${p.id}`, kind: 'payment_pending', icon: CircleDollarSign, tone: 'warning',
+      title: `Definir pagamento — ${p.name}`,
+      subtitle: `${p.clients?.company || p.clients?.name || '—'}${p.payment_amount ? ` • ${BRL(Number(p.payment_amount))}` : ''}`,
+      link: `/projects/${p.id}`,
+    }));
 
     (approvals.data ?? []).forEach((c: any) => items.push({
       id: `apr-${c.id}`, kind: 'approval', icon: ThumbsUp, tone: 'info',

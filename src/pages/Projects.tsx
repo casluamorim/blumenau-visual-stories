@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
+import { useUrlState, useUrlBoolean } from '@/hooks/usePersistedState';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, Calendar, Copy, ArrowRight, Archive } from 'lucide-react';
@@ -45,9 +46,9 @@ export default function Projects() {
   const [projects, setProjects] = useState<(Project & { clients: { name: string } | null })[]>([]);
   const [stages, setStages] = useState<Database['public']['Tables']['project_stages']['Row'][]>([]);
   const [clients, setClients] = useState<Client[]>([]);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useUrlState('q', '');
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [showArchived, setShowArchived] = useState(false);
+  const [showArchived, setShowArchived] = useUrlBoolean('archived', false);
 
   const { user } = useAuth();
   const { toast } = useToast();
@@ -148,7 +149,7 @@ export default function Projects() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" onClick={() => setShowArchived(v => !v)}>
+            <Button variant="outline" onClick={() => setShowArchived(!showArchived)}>
               <Archive className="mr-2 h-4 w-4" />
               {showArchived ? 'Ver projetos ativos' : `Ver finalizados (${finishedCount})`}
             </Button>

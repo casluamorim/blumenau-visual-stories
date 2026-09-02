@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useUrlState } from '@/hooks/usePersistedState';
 import {
   Plus, DollarSign, FileText, Receipt, Trash2, Edit, AlertTriangle,
   CheckCircle, Clock, XCircle, TrendingUp, TrendingDown, Search,
@@ -147,6 +148,7 @@ function clientSelectLabel(c: Client) {
 }
 
 export default function Financial() {
+  const [tab, setTab] = useUrlState('tab', 'invoices');
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -611,7 +613,7 @@ export default function Financial() {
 
 
         {/* Tabs */}
-        <Tabs defaultValue="invoices" className="space-y-4">
+        <Tabs value={tab} onValueChange={setTab} className="space-y-4">
           <div className="flex items-start sm:items-center justify-between gap-3 flex-col sm:flex-row">
             <TabsList className="w-full sm:w-auto overflow-x-auto">
               <TabsTrigger value="invoices">Receitas</TabsTrigger>

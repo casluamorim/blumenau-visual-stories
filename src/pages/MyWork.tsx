@@ -7,8 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowRight, Clock, CalendarDays, Play } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { ArrowRight, Clock, CalendarDays, Play, CheckCircle2 } from 'lucide-react';
 import { calculateProjectTiming, formatDuration, STAGE_STATUS_CONFIG } from '@/lib/projectTiming';
+import { DeliveryPaymentDialog } from '@/components/finance/ProjectPaymentDialogs';
+import { completeProject, createReceivableForProject } from '@/lib/quoteAutomation';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Database } from '@/integrations/supabase/types';
@@ -18,11 +21,46 @@ type Stage = Database['public']['Tables']['project_stages']['Row'];
 
 export default function MyWork() {
   const { user, role } = useAuth();
+  const { toast } = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
   const [stages, setStages] = useState<Stage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [payTarget, setPayTarget] = useState<Project | null>(null);
 
   useEffect(() => { if (user) load(); /* eslint-disable-next-line */ }, [user?.id]);
+
+  async function finishProject(project: Project) {
+    if ((project as any).payment_trigger === 'on_delivery') {
+      setPayTarget(project);
+      return;
+    }
+    await completeProject(project.id, user?.id);
+    toast({ title: 'Projeto finalizado' });
+    load();
+  }
+
+  async function confirmDeliveryPayment(amount: number, date: string) {
+    if (!payTarget) return;
+    const { error } = await createReceivableForProject({
+      clientId: payTarget.client_id,
+      projectId: payTarget.id,
+      quoteId: (payTarget as any).quote_id ?? null,
+      title: payTarget.name,
+      amount,
+      dueDate: date,
+      userId: user?.id,
+    });
+    if (error) {
+      toast({ title: 'Erro ao lançar no Financeiro', description: error.message, variant: 'destructive' });
+      return;
+    }
+    await supabase.from('projects').update({ payment_pending: false } as any).eq('id', payTarget.id);
+    await completeProject(payTarget.id, user?.id);
+    setPayTarget(null);
+    toast({ title: 'Projeto finalizado', description: 'Recebimento lançado no Financeiro PJ.' });
+    load();
+  }
+
 
   async function load() {
     setLoading(true);
@@ -135,16 +173,29 @@ export default function MyWork() {
                     </div>
                   )}
 
-                  <Link to={`/projects/${project.id}`}>
-                    <Button className="w-full">
-                      <Play className="mr-2 h-4 w-4" /> Abrir fluxo <ArrowRight className="ml-2 h-4 w-4" />
+                  <div className="flex flex-col gap-2">
+                    <Link to={`/projects/${project.id}`}>
+                      <Button className="w-full">
+                        <Play className="mr-2 h-4 w-4" /> Abrir fluxo <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </Link>
+                    <Button variant="outline" className="w-full" onClick={() => finishProject(project)}>
+                      <CheckCircle2 className="mr-2 h-4 w-4" /> Finalizar projeto
                     </Button>
-                  </Link>
+                  </div>
                 </CardContent>
               </Card>
             );
           })}
         </div>
+
+        <DeliveryPaymentDialog
+          open={!!payTarget}
+          onOpenChange={(o) => { if (!o) setPayTarget(null); }}
+          projectName={payTarget?.name ?? ''}
+          defaultAmount={Number((payTarget as any)?.payment_amount || 0)}
+          onConfirm={confirmDeliveryPayment}
+        />
       </div>
     </AppLayout>
   );
