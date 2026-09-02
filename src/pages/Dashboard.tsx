@@ -236,12 +236,20 @@ export default function Dashboard() {
     const today = new Date().toISOString().split('T')[0];
     const in7 = addDays(new Date(), 7).toISOString().split('T')[0];
 
-    const [approvals, dueInvoices, overdueTasks, pendingQuotes] = await Promise.all([
+    const [approvals, dueInvoices, overdueTasks, pendingQuotes, pendingPayments] = await Promise.all([
       supabase.from('contents').select('id, title, project_id, projects(name, clients(name, company))').eq('status', 'in_review').limit(10),
       supabase.from('invoices').select('id, title, due_date, amount, clients(name, company)').eq('status', 'pending').lte('due_date', in7).limit(10),
       supabase.from('contents').select('id, title, deadline, project_id, projects(name, clients(name, company))').lt('deadline', today).not('status', 'in', '("approved","published")').not('deadline', 'is', null).limit(10),
       supabase.from('quotes').select('id, title, clients(name, company)').eq('status', 'sent').limit(10),
+      supabase.from('projects').select('id, name, payment_amount, clients(name, company)').eq('payment_pending', true).limit(10),
     ]);
+
+    (pendingPayments.data ?? []).forEach((p: any) => items.push({
+      id: `pay-${p.id}`, kind: 'payment_pending', icon: CircleDollarSign, tone: 'warning',
+      title: `Definir pagamento — ${p.name}`,
+      subtitle: `${p.clients?.company || p.clients?.name || '—'}${p.payment_amount ? ` • ${BRL(Number(p.payment_amount))}` : ''}`,
+      link: `/projects/${p.id}`,
+    }));
 
     (approvals.data ?? []).forEach((c: any) => items.push({
       id: `apr-${c.id}`, kind: 'approval', icon: ThumbsUp, tone: 'info',
