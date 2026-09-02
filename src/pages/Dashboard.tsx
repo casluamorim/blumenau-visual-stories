@@ -48,7 +48,7 @@ interface FinStats {
 
 interface AttentionItem {
   id: string;
-  kind: 'approval' | 'invoice_due' | 'overdue_task' | 'quote_pending' | 'meeting';
+  kind: 'approval' | 'invoice_due' | 'overdue_task' | 'quote_pending' | 'meeting' | 'payment_pending';
   icon: any;
   title: string;
   subtitle: string;
