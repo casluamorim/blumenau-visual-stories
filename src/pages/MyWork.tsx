@@ -14,6 +14,7 @@ import { DeliveryPaymentDialog } from '@/components/finance/ProjectPaymentDialog
 import { completeProject, createReceivableForProject } from '@/lib/quoteAutomation';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useCachedState, hasPageCache } from '@/hooks/useCachedState';
 import type { Database } from '@/integrations/supabase/types';
 
 type Project = Database['public']['Tables']['projects']['Row'] & { clients: { name: string; company: string | null } | null };
