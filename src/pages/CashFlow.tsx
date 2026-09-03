@@ -22,6 +22,7 @@ import {
 import { format, addDays, startOfDay, endOfDay, parseISO, isBefore, isAfter, addMonths, isSameDay, differenceInDays, startOfWeek, startOfMonth, startOfYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { expandOccurrencesInRange } from '@/lib/financialMonthly';
+import { useCachedState, hasPageCache } from '@/hooks/useCachedState';
 
 type FinType = 'all' | 'pj' | 'pf';
 type RangeKey = 'today' | '7d' | '30d' | '90d' | '12m' | 'custom';
@@ -48,16 +49,16 @@ const RANGE_LABEL: Record<RangeKey, string> = {
 
 export default function CashFlow() {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!hasPageCache('cashflow:invoices'));
   const [finType, setFinType] = useState<FinType>('all');
   const [range, setRange] = useState<RangeKey>('30d');
   const [groupBy, setGroupBy] = useState<GroupBy>('day');
   const [customStart, setCustomStart] = useState(format(addDays(new Date(), -30), 'yyyy-MM-dd'));
   const [customEnd, setCustomEnd] = useState(format(addDays(new Date(), 30), 'yyyy-MM-dd'));
 
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const [expenses, setExpenses] = useState<any[]>([]);
-  const [personalIncome, setPersonalIncome] = useState<any[]>([]);
+  const [invoices, setInvoices] = useCachedState<any[]>('cashflow:invoices', []);
+  const [expenses, setExpenses] = useCachedState<any[]>('cashflow:expenses', []);
+  const [personalIncome, setPersonalIncome] = useCachedState<any[]>('cashflow:pi', []);
   const [simulations, setSimulations] = useState<Movement[]>([]);
 
   // Simulation dialog
@@ -70,7 +71,7 @@ export default function CashFlow() {
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
-    setLoading(true);
+    setLoading(!hasPageCache('cashflow:invoices'));
     try {
       const [inv, exp, pi] = await Promise.all([
         supabase.from('invoices').select('*, clients(name, company)').order('due_date'),

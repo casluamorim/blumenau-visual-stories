@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import {
+import { useCachedState, hasPageCache } from '@/hooks/useCachedState';
   Clock, UserPlus, UserCheck, UserX, Shield, Link2, Unlink, ArrowRightLeft, KeyRound, FileText, Search,
 } from 'lucide-react';
 
@@ -73,16 +74,16 @@ const ACTION_FILTERS = [
 ];
 
 export default function ActivityPage() {
-  const [logs, setLogs] = useState<LogRow[]>([]);
-  const [profiles, setProfiles] = useState<Record<string, Profile>>({});
-  const [loading, setLoading] = useState(true);
+  const [logs, setLogs] = useCachedState<LogRow[]>('activity:logs', []);
+  const [profiles, setProfiles] = useCachedState<Record<string, Profile>>('activity:profiles', {});
+  const [loading, setLoading] = useState(!hasPageCache('activity:logs'));
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     let mounted = true;
     (async () => {
-      setLoading(true);
+      setLoading(!hasPageCache('activity:logs'));
       const [logsRes, profilesRes] = await Promise.all([
         supabase.from('activity_logs').select('*').order('created_at', { ascending: false }).limit(300),
         supabase.from('profiles').select('user_id, full_name, email, avatar_url'),

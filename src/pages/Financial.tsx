@@ -32,6 +32,7 @@ import {
   Occurrence,
 } from '@/lib/financialMonthly';
 import { format, parseISO } from 'date-fns';
+import { useCachedState, hasPageCache } from '@/hooks/useCachedState';
 
 // Types
 interface Quote {
@@ -149,11 +150,11 @@ function clientSelectLabel(c: Client) {
 
 export default function Financial() {
   const [tab, setTab] = useUrlState('tab', 'invoices');
-  const [quotes, setQuotes] = useState<Quote[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [quotes, setQuotes] = useCachedState<Quote[]>('fin:quotes', []);
+  const [invoices, setInvoices] = useCachedState<Invoice[]>('fin:invoices', []);
+  const [expenses, setExpenses] = useCachedState<Expense[]>('fin:expenses', []);
+  const [clients, setClients] = useCachedState<Client[]>('fin:clients', []);
+  const [projects, setProjects] = useCachedState<Project[]>('fin:projects', []);
   const [search, setSearch] = useState('');
   const [showQuoteDialog, setShowQuoteDialog] = useState(false);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);

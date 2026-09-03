@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { Search, FileText, AlertTriangle, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useCachedState, hasPageCache } from '@/hooks/useCachedState';
 
 const statusConfig: Record<string, { label: string; color: string }> = {
   draft: { label: 'Rascunho', color: 'bg-gray-500/10 text-gray-400 border-gray-500/20' },
@@ -23,7 +24,7 @@ const typeLabels: Record<string, string> = {
 };
 
 export default function Contents() {
-  const [contents, setContents] = useState<any[]>([]);
+  const [contents, setContents] = useCachedState<any[]>('contents:list', []);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 

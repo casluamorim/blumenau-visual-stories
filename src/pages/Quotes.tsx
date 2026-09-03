@@ -18,6 +18,7 @@ import { useUrlState } from '@/hooks/usePersistedState';
 import { createProjectFromQuote, createReceivableForProject, type CreatedProject } from '@/lib/quoteAutomation';
 import { PaymentScheduleDialog } from '@/components/finance/ProjectPaymentDialogs';
 import {
+import { useCachedState, hasPageCache } from '@/hooks/useCachedState';
   Plus, FileText, Receipt, Trash2, Edit, AlertTriangle, CheckCircle, Clock, XCircle, Search, ThumbsUp,
 } from 'lucide-react';
 
@@ -59,8 +60,8 @@ function clientDisplay(client?: { name: string; company: string | null } | null)
 export default function Quotes() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [quotes, setQuotes] = useState<Quote[]>([]);
-  const [clients, setClients] = useState<ComboClient[]>([]);
+  const [quotes, setQuotes] = useCachedState<Quote[]>('quotes:list', []);
+  const [clients, setClients] = useCachedState<ComboClient[]>('quotes:clients', []);
   const [search, setSearch] = useUrlState('q', '');
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState<Quote | null>(null);

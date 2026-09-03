@@ -26,6 +26,7 @@ import {
   expandOccurrencesForMonth, expandOccurrencesForMonths, monthLabel, Occurrence,
 } from '@/lib/financialMonthly';
 import { format, parseISO } from 'date-fns';
+import { useCachedState, hasPageCache } from '@/hooks/useCachedState';
 
 interface PFIncome {
   id: string; description: string; amount: number; category: string | null;
@@ -51,8 +52,8 @@ const incomeCategories = ['Salário', 'Freelance', 'Aluguel', 'Investimentos', '
 const expenseCategories = ['Moradia', 'Alimentação', 'Transporte', 'Saúde', 'Educação', 'Lazer', 'Assinaturas', 'Outros'];
 
 export default function FinancialPersonal() {
-  const [incomes, setIncomes] = useState<PFIncome[]>([]);
-  const [expenses, setExpenses] = useState<PFExpense[]>([]);
+  const [incomes, setIncomes] = useCachedState<PFIncome[]>('pf:incomes', []);
+  const [expenses, setExpenses] = useCachedState<PFExpense[]>('pf:expenses', []);
   const [search, setSearch] = useState('');
   const [showIncomeDialog, setShowIncomeDialog] = useState(false);
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
