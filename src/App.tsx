@@ -77,7 +77,7 @@ function useRoutePrefetch() {
 function RouteFallback() {
   return (
     <div className="fixed left-0 top-0 z-[60] h-0.5 w-full overflow-hidden bg-transparent">
-      <div className="h-full w-1/3 animate-[shimmer_1s_infinite] bg-primary" />
+      <div className="h-full w-1/3 animate-pulse bg-primary" />
     </div>
   );
 }
@@ -93,6 +93,7 @@ function PageFallback() {
 
 function AppRoutes() {
   const { user, loading, role, roleLoading, isClient } = useAuth();
+  useRoutePrefetch();
 
   if (loading) return <PageFallback />;
   if (!user) return <Auth />;
@@ -110,7 +111,7 @@ function AppRoutes() {
   }
 
   return (
-    <Suspense fallback={<PageFallback />}>
+    <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/clients" element={<Clients />} />
