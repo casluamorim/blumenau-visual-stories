@@ -718,6 +718,8 @@ export type Database = {
           financial_type: Database["public"]["Enums"]["financial_type"]
           id: string
           is_recurring_active: boolean
+          linked_income_id: string | null
+          linked_invoice_id: string | null
           notes: string | null
           parent_expense_id: string | null
           project_id: string | null
@@ -739,6 +741,8 @@ export type Database = {
           financial_type?: Database["public"]["Enums"]["financial_type"]
           id?: string
           is_recurring_active?: boolean
+          linked_income_id?: string | null
+          linked_invoice_id?: string | null
           notes?: string | null
           parent_expense_id?: string | null
           project_id?: string | null
@@ -760,6 +764,8 @@ export type Database = {
           financial_type?: Database["public"]["Enums"]["financial_type"]
           id?: string
           is_recurring_active?: boolean
+          linked_income_id?: string | null
+          linked_invoice_id?: string | null
           notes?: string | null
           parent_expense_id?: string | null
           project_id?: string | null
@@ -775,6 +781,20 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_linked_income_id_fkey"
+            columns: ["linked_income_id"]
+            isOneToOne: false
+            referencedRelation: "personal_income"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_linked_invoice_id_fkey"
+            columns: ["linked_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
           {
@@ -826,7 +846,9 @@ export type Database = {
       invoices: {
         Row: {
           amount: number
+          asaas_account: string | null
           client_id: string
+          cnpj: string | null
           created_at: string
           created_by: string | null
           due_date: string
@@ -843,12 +865,15 @@ export type Database = {
           recurrence_day: number | null
           recurrence_end: string | null
           status: Database["public"]["Enums"]["invoice_status"]
+          tax_percent: number
           title: string
           updated_at: string
         }
         Insert: {
           amount?: number
+          asaas_account?: string | null
           client_id: string
+          cnpj?: string | null
           created_at?: string
           created_by?: string | null
           due_date: string
@@ -865,12 +890,15 @@ export type Database = {
           recurrence_day?: number | null
           recurrence_end?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
+          tax_percent?: number
           title: string
           updated_at?: string
         }
         Update: {
           amount?: number
+          asaas_account?: string | null
           client_id?: string
+          cnpj?: string | null
           created_at?: string
           created_by?: string | null
           due_date?: string
@@ -887,6 +915,7 @@ export type Database = {
           recurrence_day?: number | null
           recurrence_end?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
+          tax_percent?: number
           title?: string
           updated_at?: string
         }
@@ -989,6 +1018,7 @@ export type Database = {
           recurrence_day: number | null
           recurrence_end: string | null
           status: Database["public"]["Enums"]["expense_status"]
+          tax_percent: number
           updated_at: string
         }
         Insert: {
@@ -1007,6 +1037,7 @@ export type Database = {
           recurrence_day?: number | null
           recurrence_end?: string | null
           status?: Database["public"]["Enums"]["expense_status"]
+          tax_percent?: number
           updated_at?: string
         }
         Update: {
@@ -1025,6 +1056,7 @@ export type Database = {
           recurrence_day?: number | null
           recurrence_end?: string | null
           status?: Database["public"]["Enums"]["expense_status"]
+          tax_percent?: number
           updated_at?: string
         }
         Relationships: [
