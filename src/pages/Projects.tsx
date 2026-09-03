@@ -22,6 +22,7 @@ import { useStageFlowPresets, applyFlowPreset } from '@/hooks/useStageFlowPreset
 import { format, differenceInDays, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Database } from '@/integrations/supabase/types';
+import { useCachedState, hasPageCache } from '@/hooks/useCachedState';
 
 type Project = Database['public']['Tables']['projects']['Row'];
 type Client = Database['public']['Tables']['clients']['Row'];
@@ -43,8 +44,8 @@ const priorityConfig: Record<string, { label: string; color: string }> = {
 };
 
 export default function Projects() {
-  const [projects, setProjects] = useState<(Project & { clients: { name: string } | null })[]>([]);
-  const [stages, setStages] = useState<Database['public']['Tables']['project_stages']['Row'][]>([]);
+  const [projects, setProjects] = useCachedState<(Project & { clients: { name: string } | null })[]>('projects:list', []);
+  const [stages, setStages] = useCachedState<Database['public']['Tables']['project_stages']['Row'][]>('projects:stages', []);
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useUrlState('q', '');
   const [dialogOpen, setDialogOpen] = useState(false);

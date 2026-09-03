@@ -1,3 +1,4 @@
+import { useCachedState, hasPageCache } from '@/hooks/useCachedState';
 import { useEffect, useMemo, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,8 +60,8 @@ function clientDisplay(client?: { name: string; company: string | null } | null)
 export default function Quotes() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [quotes, setQuotes] = useState<Quote[]>([]);
-  const [clients, setClients] = useState<ComboClient[]>([]);
+  const [quotes, setQuotes] = useCachedState<Quote[]>('quotes:list', []);
+  const [clients, setClients] = useCachedState<ComboClient[]>('quotes:clients', []);
   const [search, setSearch] = useUrlState('q', '');
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState<Quote | null>(null);

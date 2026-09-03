@@ -23,6 +23,7 @@ import { ptBR } from 'date-fns/locale';
 import { expandOccurrencesForMonth } from '@/lib/financialMonthly';
 import { ClientNotificationsCard } from '@/components/dashboard/ClientNotificationsCard';
 import { useUrlState } from '@/hooks/usePersistedState';
+import { useCachedState, hasPageCache } from '@/hooks/useCachedState';
 
 
 type Period = '7d' | '30d' | 'month' | 'quarter' | 'year';
@@ -90,20 +91,20 @@ export default function Dashboard() {
   const [periodRaw, setPeriodRaw] = useUrlState('period', '30d');
   const period = periodRaw as Period;
   const setPeriod = (p: Period) => setPeriodRaw(p);
-  const [ops, setOps] = useState<OpsStats>({ activeClients: 0, activeProjects: 0, pendingApprovals: 0, overdueTasks: 0 });
-  const [fin, setFin] = useState<FinStats>({ revenueMonth: 0, revenuePrevMonth: 0, receivables: 0, expensesMonth: 0, expensesPrevMonth: 0 });
-  const [cashflow, setCashflow] = useState<{ date: string; entrada: number; saida: number }[]>([]);
-  const [topClients, setTopClients] = useState<{ name: string; value: number }[]>([]);
-  const [pipeline, setPipeline] = useState<PipelineCounts>({ draft: 0, in_review: 0, revision: 0, approved: 0, published: 0 });
-  const [attention, setAttention] = useState<AttentionItem[]>([]);
-  const [agenda, setAgenda] = useState<AgendaItem[]>([]);
-  const [feed, setFeed] = useState<ActivityFeedItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [ops, setOps] = useCachedState<OpsStats>('dash:ops', { activeClients: 0, activeProjects: 0, pendingApprovals: 0, overdueTasks: 0 });
+  const [fin, setFin] = useCachedState<FinStats>('dash:fin', { revenueMonth: 0, revenuePrevMonth: 0, receivables: 0, expensesMonth: 0, expensesPrevMonth: 0 });
+  const [cashflow, setCashflow] = useCachedState<{ date: string; entrada: number; saida: number }[]>('dash:cashflow', []);
+  const [topClients, setTopClients] = useCachedState<{ name: string; value: number }[]>('dash:topClients', []);
+  const [pipeline, setPipeline] = useCachedState<PipelineCounts>('dash:pipeline', { draft: 0, in_review: 0, revision: 0, approved: 0, published: 0 });
+  const [attention, setAttention] = useCachedState<AttentionItem[]>('dash:attention', []);
+  const [agenda, setAgenda] = useCachedState<AgendaItem[]>('dash:agenda', []);
+  const [feed, setFeed] = useCachedState<ActivityFeedItem[]>('dash:feed', []);
+  const [loading, setLoading] = useState(!hasPageCache('dash:ops'));
 
   useEffect(() => { loadAll(); /* eslint-disable-next-line */ }, [period]);
 
   async function loadAll() {
-    setLoading(true);
+    setLoading(!hasPageCache('dash:ops'));
     await Promise.all([loadOps(), loadFinancial(), loadCashflow(), loadTopClients(), loadPipeline(), loadAttention(), loadAgenda(), loadFeed()]);
     setLoading(false);
   }
