@@ -1,3 +1,4 @@
+import { useCachedState, hasPageCache } from '@/hooks/useCachedState';
 import { useEffect, useMemo, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +19,6 @@ import { useUrlState } from '@/hooks/usePersistedState';
 import { createProjectFromQuote, createReceivableForProject, type CreatedProject } from '@/lib/quoteAutomation';
 import { PaymentScheduleDialog } from '@/components/finance/ProjectPaymentDialogs';
 import {
-import { useCachedState, hasPageCache } from '@/hooks/useCachedState';
   Plus, FileText, Receipt, Trash2, Edit, AlertTriangle, CheckCircle, Clock, XCircle, Search, ThumbsUp,
 } from 'lucide-react';
 
