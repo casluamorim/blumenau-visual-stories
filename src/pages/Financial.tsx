@@ -456,6 +456,7 @@ export default function Financial() {
       recurrence_end: eRecurrenceEnd || null, client_id: eClientId || null,
       project_id: eProjectId || null, notes: eNotes || null,
       attachment_url: attachmentUrl, created_by: user?.id,
+      linked_invoice_id: eLinkedInvoiceId || null,
     };
 
     if (editingExpense) {
