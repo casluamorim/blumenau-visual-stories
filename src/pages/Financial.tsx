@@ -90,6 +90,8 @@ interface Expense {
   attachment_url: string | null;
   notes: string | null;
   created_at: string;
+  linked_invoice_id?: string | null;
+  linked_income_id?: string | null;
   clients?: { name: string; company: string | null } | null;
   projects?: { name: string } | null;
 }
@@ -99,6 +101,8 @@ interface Client {
   name: string;
   company: string | null;
   phone: string | null;
+  asaas_account?: string | null;
+  billing_cpf_cnpj?: string | null;
 }
 
 interface Project {
