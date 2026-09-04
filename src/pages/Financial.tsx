@@ -195,6 +195,9 @@ export default function Financial() {
   const [iRecurrenceDay, setIRecurrenceDay] = useState('');
   const [iRecurrenceEnd, setIRecurrenceEnd] = useState('');
   const [iProjectId, setIProjectId] = useState('');
+  const [iTaxPercent, setITaxPercent] = useState('');
+  const [iCnpj, setICnpj] = useState('');
+  const [iAsaasAccount, setIAsaasAccount] = useState('');
 
   // Expense form
   const [eDescription, setEDescription] = useState('');
