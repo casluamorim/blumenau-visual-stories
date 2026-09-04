@@ -316,7 +316,19 @@ export default function Financial() {
     setIAmount(0); setIDueDate(''); setIStatus('pending');
     setIPaymentMethod(''); setINotes('');
     setIRecurrence('one_time'); setIRecurrenceDay(''); setIRecurrenceEnd(''); setIProjectId('');
+    setITaxPercent(''); setICnpj(''); setIAsaasAccount('');
     setShowInvoiceDialog(true);
+  }
+
+  /** Herda conta/CNPJ do cliente ao selecionar (somente em nova fatura ou campo vazio). */
+  function onInvoiceClientChange(clientId: string) {
+    setIClientId(clientId);
+    const c = clients.find(x => x.id === clientId);
+    if (!c) return;
+    const acc = String((c as any).asaas_account ?? '1') === '2' ? '2' : '1';
+    if (!editingInvoice || !iAsaasAccount) setIAsaasAccount(acc);
+    const inherited = (c as any).billing_cpf_cnpj || accounts[`asaas_account_${acc}_cnpj`] || '';
+    if (!editingInvoice || !iCnpj) setICnpj(inherited);
   }
 
   function openEditInvoice(inv: Invoice) {
@@ -328,6 +340,11 @@ export default function Financial() {
     setIRecurrenceDay(inv.recurrence_day?.toString() ?? '');
     setIRecurrenceEnd(inv.recurrence_end ?? '');
     setIProjectId(inv.project_id ?? '');
+    setITaxPercent(inv.tax_percent != null ? String(inv.tax_percent) : '');
+    const client = clients.find(c => c.id === inv.client_id);
+    const acc = inv.asaas_account ?? (String((client as any)?.asaas_account ?? '1') === '2' ? '2' : '1');
+    setIAsaasAccount(acc);
+    setICnpj(inv.cnpj ?? (client as any)?.billing_cpf_cnpj ?? accounts[`asaas_account_${acc}_cnpj`] ?? '');
     setShowInvoiceDialog(true);
   }
 
@@ -343,6 +360,9 @@ export default function Financial() {
       recurrence_end: iRecurrenceEnd || null,
       project_id: iProjectId || null,
       financial_type: 'pj' as any,
+      tax_percent: iTaxPercent ? Number(String(iTaxPercent).replace(',', '.')) : 0,
+      cnpj: iCnpj || null,
+      asaas_account: iAsaasAccount || null,
     };
 
     if (editingInvoice) {
