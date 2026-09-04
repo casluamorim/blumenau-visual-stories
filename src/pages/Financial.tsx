@@ -542,11 +542,18 @@ export default function Financial() {
     return occ.status;
   };
 
+  /** Despesas vinculadas a cada receita (fatura PJ). */
+  const linkedByInvoice = useMemo(
+    () => sumLinkedExpenses(expenses as any[], 'linked_invoice_id'),
+    [expenses]
+  );
+
   const monthStats = useMemo(() => {
-    let recebido = 0, pendente = 0, atrasado = 0, despPagas = 0, despPrev = 0;
+    let recebido = 0, pendente = 0, atrasado = 0, despPagas = 0, despPrev = 0, impostos = 0;
     for (const o of monthInvoiceOccs) {
       const st = resolveStatus(o);
       const v = Number(o.item.amount) || 0;
+      impostos += taxAmount(v, o.item.tax_percent);
       if (st === 'paid') recebido += v;
       else if (st === 'overdue') atrasado += v;
       else if (st !== 'cancelled') pendente += v;
@@ -560,7 +567,11 @@ export default function Financial() {
     const receitaPrevista = recebido + pendente + atrasado;
     const despesaPrevista = despPagas + despPrev;
     const lucroPrevisto = receitaPrevista - despesaPrevista;
-    return { recebido, pendente, atrasado, despPagas, despPrev, receitaPrevista, despesaPrevista, lucroPrevisto };
+    const lucroLiquido = lucroPrevisto - impostos;
+    return {
+      recebido, pendente, atrasado, despPagas, despPrev,
+      receitaPrevista, despesaPrevista, lucroPrevisto, impostos, lucroLiquido,
+    };
   }, [monthInvoiceOccs, monthExpenseOccs]);
 
   const totalQuotes = quotes
