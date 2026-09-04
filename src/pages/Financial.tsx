@@ -67,6 +67,9 @@ interface Invoice {
   is_recurring_active: boolean;
   project_id: string | null;
   financial_type: string;
+  tax_percent?: number | null;
+  cnpj?: string | null;
+  asaas_account?: string | null;
   clients?: { name: string; company: string | null; phone: string | null };
 }
 
