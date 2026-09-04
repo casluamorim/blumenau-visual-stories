@@ -421,6 +421,7 @@ export default function Financial() {
     setEDescription(''); setEAmount(0); setECategory(''); setEDueDate('');
     setEStatus('pending'); setERecurrence('one_time'); setERecurrenceDay('');
     setERecurrenceEnd(''); setEClientId(''); setEProjectId(''); setENotes(''); setEAttachment(null);
+    setELinkedInvoiceId('');
     setShowExpenseDialog(true);
   }
 
@@ -431,6 +432,7 @@ export default function Financial() {
     setERecurrenceDay(e.recurrence_day?.toString() ?? ''); setERecurrenceEnd(e.recurrence_end ?? '');
     setEClientId(e.client_id ?? ''); setEProjectId(e.project_id ?? ''); setENotes(e.notes ?? '');
     setEAttachment(null);
+    setELinkedInvoiceId(e.linked_invoice_id ?? '');
     setShowExpenseDialog(true);
   }
 
