@@ -212,15 +212,30 @@ export default function Financial() {
   const [eProjectId, setEProjectId] = useState('');
   const [eNotes, setENotes] = useState('');
   const [eAttachment, setEAttachment] = useState<File | null>(null);
+  const [eLinkedInvoiceId, setELinkedInvoiceId] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [accounts, setAccounts] = useState<Record<string, string | null>>({});
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); loadAccounts(); }, []);
+
+  async function loadAccounts() {
+    const { data } = await supabase.from('agency_settings')
+      .select('asaas_account_1_label, asaas_account_1_cnpj, asaas_account_2_label, asaas_account_2_cnpj')
+      .limit(1).maybeSingle();
+    setAccounts((data as any) ?? {});
+  }
+
+  function accountLabel(n: string) {
+    const label = accounts[`asaas_account_${n}_label`] || `Conta ${n}`;
+    const cnpj = accounts[`asaas_account_${n}_cnpj`];
+    return cnpj ? `${label} — ${cnpj}` : label;
+  }
 
   async function loadData() {
     const [q, i, c, p, ex] = await Promise.all([
       supabase.from('quotes').select('*, clients(name, company, phone)').order('created_at', { ascending: false }),
       supabase.from('invoices').select('*, clients(name, company, phone)').order('created_at', { ascending: false }),
-      supabase.from('clients').select('id, name, company, phone').eq('status', 'active').order('name'),
+      supabase.from('clients').select('id, name, company, phone, asaas_account, billing_cpf_cnpj').eq('status', 'active').order('name'),
       supabase.from('projects').select('id, name, client_id').order('name'),
       supabase.from('expenses').select('*, clients(name, company), projects(name)').eq('financial_type', 'pj').order('created_at', { ascending: false }),
     ]);
