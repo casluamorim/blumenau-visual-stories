@@ -33,6 +33,7 @@ import {
 } from '@/lib/financialMonthly';
 import { format, parseISO } from 'date-fns';
 import { useCachedState, hasPageCache } from '@/hooks/useCachedState';
+import { netRevenue, sumLinkedExpenses, taxAmount } from '@/lib/netRevenue';
 
 // Types
 interface Quote {
@@ -66,6 +67,9 @@ interface Invoice {
   is_recurring_active: boolean;
   project_id: string | null;
   financial_type: string;
+  tax_percent?: number | null;
+  cnpj?: string | null;
+  asaas_account?: string | null;
   clients?: { name: string; company: string | null; phone: string | null };
 }
 
@@ -86,6 +90,8 @@ interface Expense {
   attachment_url: string | null;
   notes: string | null;
   created_at: string;
+  linked_invoice_id?: string | null;
+  linked_income_id?: string | null;
   clients?: { name: string; company: string | null } | null;
   projects?: { name: string } | null;
 }
@@ -95,6 +101,8 @@ interface Client {
   name: string;
   company: string | null;
   phone: string | null;
+  asaas_account?: string | null;
+  billing_cpf_cnpj?: string | null;
 }
 
 interface Project {
@@ -187,6 +195,9 @@ export default function Financial() {
   const [iRecurrenceDay, setIRecurrenceDay] = useState('');
   const [iRecurrenceEnd, setIRecurrenceEnd] = useState('');
   const [iProjectId, setIProjectId] = useState('');
+  const [iTaxPercent, setITaxPercent] = useState('');
+  const [iCnpj, setICnpj] = useState('');
+  const [iAsaasAccount, setIAsaasAccount] = useState('');
 
   // Expense form
   const [eDescription, setEDescription] = useState('');
@@ -201,15 +212,30 @@ export default function Financial() {
   const [eProjectId, setEProjectId] = useState('');
   const [eNotes, setENotes] = useState('');
   const [eAttachment, setEAttachment] = useState<File | null>(null);
+  const [eLinkedInvoiceId, setELinkedInvoiceId] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [accounts, setAccounts] = useState<Record<string, string | null>>({});
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); loadAccounts(); }, []);
+
+  async function loadAccounts() {
+    const { data } = await supabase.from('agency_settings')
+      .select('asaas_account_1_label, asaas_account_1_cnpj, asaas_account_2_label, asaas_account_2_cnpj')
+      .limit(1).maybeSingle();
+    setAccounts((data as any) ?? {});
+  }
+
+  function accountLabel(n: string) {
+    const label = accounts[`asaas_account_${n}_label`] || `Conta ${n}`;
+    const cnpj = accounts[`asaas_account_${n}_cnpj`];
+    return cnpj ? `${label} — ${cnpj}` : label;
+  }
 
   async function loadData() {
     const [q, i, c, p, ex] = await Promise.all([
       supabase.from('quotes').select('*, clients(name, company, phone)').order('created_at', { ascending: false }),
       supabase.from('invoices').select('*, clients(name, company, phone)').order('created_at', { ascending: false }),
-      supabase.from('clients').select('id, name, company, phone').eq('status', 'active').order('name'),
+      supabase.from('clients').select('id, name, company, phone, asaas_account, billing_cpf_cnpj').eq('status', 'active').order('name'),
       supabase.from('projects').select('id, name, client_id').order('name'),
       supabase.from('expenses').select('*, clients(name, company), projects(name)').eq('financial_type', 'pj').order('created_at', { ascending: false }),
     ]);
@@ -290,7 +316,19 @@ export default function Financial() {
     setIAmount(0); setIDueDate(''); setIStatus('pending');
     setIPaymentMethod(''); setINotes('');
     setIRecurrence('one_time'); setIRecurrenceDay(''); setIRecurrenceEnd(''); setIProjectId('');
+    setITaxPercent(''); setICnpj(''); setIAsaasAccount('');
     setShowInvoiceDialog(true);
+  }
+
+  /** Herda conta/CNPJ do cliente ao selecionar (somente em nova fatura ou campo vazio). */
+  function onInvoiceClientChange(clientId: string) {
+    setIClientId(clientId);
+    const c = clients.find(x => x.id === clientId);
+    if (!c) return;
+    const acc = String((c as any).asaas_account ?? '1') === '2' ? '2' : '1';
+    if (!editingInvoice || !iAsaasAccount) setIAsaasAccount(acc);
+    const inherited = (c as any).billing_cpf_cnpj || accounts[`asaas_account_${acc}_cnpj`] || '';
+    if (!editingInvoice || !iCnpj) setICnpj(inherited);
   }
 
   function openEditInvoice(inv: Invoice) {
@@ -302,6 +340,11 @@ export default function Financial() {
     setIRecurrenceDay(inv.recurrence_day?.toString() ?? '');
     setIRecurrenceEnd(inv.recurrence_end ?? '');
     setIProjectId(inv.project_id ?? '');
+    setITaxPercent(inv.tax_percent != null ? String(inv.tax_percent) : '');
+    const client = clients.find(c => c.id === inv.client_id);
+    const acc = inv.asaas_account ?? (String((client as any)?.asaas_account ?? '1') === '2' ? '2' : '1');
+    setIAsaasAccount(acc);
+    setICnpj(inv.cnpj ?? (client as any)?.billing_cpf_cnpj ?? accounts[`asaas_account_${acc}_cnpj`] ?? '');
     setShowInvoiceDialog(true);
   }
 
@@ -317,6 +360,9 @@ export default function Financial() {
       recurrence_end: iRecurrenceEnd || null,
       project_id: iProjectId || null,
       financial_type: 'pj' as any,
+      tax_percent: iTaxPercent ? Number(String(iTaxPercent).replace(',', '.')) : 0,
+      cnpj: iCnpj || null,
+      asaas_account: iAsaasAccount || null,
     };
 
     if (editingInvoice) {
@@ -375,6 +421,7 @@ export default function Financial() {
     setEDescription(''); setEAmount(0); setECategory(''); setEDueDate('');
     setEStatus('pending'); setERecurrence('one_time'); setERecurrenceDay('');
     setERecurrenceEnd(''); setEClientId(''); setEProjectId(''); setENotes(''); setEAttachment(null);
+    setELinkedInvoiceId('');
     setShowExpenseDialog(true);
   }
 
@@ -385,6 +432,7 @@ export default function Financial() {
     setERecurrenceDay(e.recurrence_day?.toString() ?? ''); setERecurrenceEnd(e.recurrence_end ?? '');
     setEClientId(e.client_id ?? ''); setEProjectId(e.project_id ?? ''); setENotes(e.notes ?? '');
     setEAttachment(null);
+    setELinkedInvoiceId(e.linked_invoice_id ?? '');
     setShowExpenseDialog(true);
   }
 
@@ -408,6 +456,7 @@ export default function Financial() {
       recurrence_end: eRecurrenceEnd || null, client_id: eClientId || null,
       project_id: eProjectId || null, notes: eNotes || null,
       attachment_url: attachmentUrl, created_by: user?.id,
+      linked_invoice_id: eLinkedInvoiceId || null,
     };
 
     if (editingExpense) {
@@ -493,11 +542,18 @@ export default function Financial() {
     return occ.status;
   };
 
+  /** Despesas vinculadas a cada receita (fatura PJ). */
+  const linkedByInvoice = useMemo(
+    () => sumLinkedExpenses(expenses as any[], 'linked_invoice_id'),
+    [expenses]
+  );
+
   const monthStats = useMemo(() => {
-    let recebido = 0, pendente = 0, atrasado = 0, despPagas = 0, despPrev = 0;
+    let recebido = 0, pendente = 0, atrasado = 0, despPagas = 0, despPrev = 0, impostos = 0;
     for (const o of monthInvoiceOccs) {
       const st = resolveStatus(o);
       const v = Number(o.item.amount) || 0;
+      impostos += taxAmount(v, o.item.tax_percent);
       if (st === 'paid') recebido += v;
       else if (st === 'overdue') atrasado += v;
       else if (st !== 'cancelled') pendente += v;
@@ -511,7 +567,11 @@ export default function Financial() {
     const receitaPrevista = recebido + pendente + atrasado;
     const despesaPrevista = despPagas + despPrev;
     const lucroPrevisto = receitaPrevista - despesaPrevista;
-    return { recebido, pendente, atrasado, despPagas, despPrev, receitaPrevista, despesaPrevista, lucroPrevisto };
+    const lucroLiquido = lucroPrevisto - impostos;
+    return {
+      recebido, pendente, atrasado, despPagas, despPrev,
+      receitaPrevista, despesaPrevista, lucroPrevisto, impostos, lucroLiquido,
+    };
   }, [monthInvoiceOccs, monthExpenseOccs]);
 
   const totalQuotes = quotes
