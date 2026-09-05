@@ -1034,6 +1034,38 @@ export default function Financial() {
                 </Select>
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Imposto (%)</Label>
+                <Input type="number" step="0.01" min="0" value={iTaxPercent}
+                  onChange={e => setITaxPercent(e.target.value)} placeholder="Ex: 6" />
+              </div>
+              <div>
+                <Label>Conta de faturamento</Label>
+                <Select value={iAsaasAccount || '1'} onValueChange={(v) => {
+                  setIAsaasAccount(v);
+                  setICnpj((accounts as any)[`asaas_account_${v}_cnpj`] ?? iCnpj);
+                }}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">{accountLabel('1')}</SelectItem>
+                    <SelectItem value="2">{accountLabel('2')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label>CNPJ / CPF da nota</Label>
+              <Input value={iCnpj} onChange={e => setICnpj(e.target.value)} placeholder="CNPJ usado nesta fatura" />
+            </div>
+            {iAmount > 0 && (
+              <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs space-y-1">
+                <div className="flex justify-between"><span className="text-muted-foreground">Imposto</span>
+                  <span className="text-destructive">{fmt(taxAmount(iAmount, iTaxPercent))}</span></div>
+                <div className="flex justify-between font-semibold"><span>Líquido (sem despesas)</span>
+                  <span className="text-emerald-400">{fmt(netRevenue(iAmount, iTaxPercent))}</span></div>
+              </div>
+            )}
             <div>
               <Label>Observações</Label>
               <Textarea value={iNotes} onChange={e => setINotes(e.target.value)} rows={2} />
