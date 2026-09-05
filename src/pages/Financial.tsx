@@ -670,6 +670,18 @@ export default function Financial() {
               <p className="text-xs text-muted-foreground mt-1">Receita - despesa do mês</p>
             </CardContent>
           </Card>
+          <Card className="card-premium">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Lucro líquido</CardTitle>
+              <DollarSign className={`h-5 w-5 ${monthStats.lucroLiquido >= 0 ? 'text-emerald-400' : 'text-destructive'}`} />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${monthStats.lucroLiquido >= 0 ? 'text-emerald-400' : 'text-destructive'}`}>
+                {fmt(monthStats.lucroLiquido)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Já com {fmt(monthStats.impostos)} de imposto</p>
+            </CardContent>
+          </Card>
         </div>
 
 
