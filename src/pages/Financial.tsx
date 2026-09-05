@@ -770,6 +770,20 @@ export default function Financial() {
                             <TableCell className="font-medium text-foreground">
                               <InlineEdit table="invoices" id={inv.id} field="amount" value={inv.amount} type="number" disabled={occ.virtual} format={(v) => fmt(Number(v))} onSaved={loadData} />
                             </TableCell>
+                            <TableCell className="text-destructive text-xs whitespace-nowrap">
+                              <InlineEdit table="invoices" id={inv.id} field="tax_percent" value={inv.tax_percent ?? 0} type="number"
+                                disabled={occ.virtual}
+                                display={`${Number(inv.tax_percent ?? 0).toLocaleString('pt-BR')}% • ${fmt(taxAmount(inv.amount, inv.tax_percent))}`}
+                                onSaved={loadData} />
+                            </TableCell>
+                            <TableCell className="font-medium text-emerald-400 whitespace-nowrap">
+                              {fmt(netRevenue(inv.amount, inv.tax_percent, linkedByInvoice.get(inv.id) ?? 0))}
+                              {(linkedByInvoice.get(inv.id) ?? 0) > 0 && (
+                                <div className="text-[10px] text-muted-foreground font-normal">
+                                  −{fmt(linkedByInvoice.get(inv.id) ?? 0)} em despesas
+                                </div>
+                              )}
+                            </TableCell>
                             <TableCell className="text-muted-foreground">
                               <InlineEdit table="invoices" id={inv.id} field="due_date" value={inv.due_date} type="date" disabled={occ.virtual} format={(v) => v ? new Date(v).toLocaleDateString('pt-BR') : '—'} display={new Date(occ.occurrence_date).toLocaleDateString('pt-BR')} onSaved={loadData} />
                             </TableCell>
