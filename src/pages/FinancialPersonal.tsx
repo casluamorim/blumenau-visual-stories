@@ -68,7 +68,7 @@ export default function FinancialPersonal() {
   const [iCat, setICat] = useState(''); const [iDate, setIDate] = useState('');
   const [iStatus, setIStatus] = useState('pending'); const [iRec, setIRec] = useState('one_time');
   const [iRecDay, setIRecDay] = useState(''); const [iRecEnd, setIRecEnd] = useState('');
-  const [iNotes, setINotes] = useState('');
+  const [iNotes, setINotes] = useState(''); const [iTax, setITax] = useState('');
 
   // Expense form
   const [eDesc, setEDesc] = useState(''); const [eAmt, setEAmt] = useState(0);
@@ -76,6 +76,7 @@ export default function FinancialPersonal() {
   const [eStatus, setEStatus] = useState('pending'); const [eRec, setERec] = useState('one_time');
   const [eRecDay, setERecDay] = useState(''); const [eRecEnd, setERecEnd] = useState('');
   const [eNotes, setENotes] = useState(''); const [eAttachment, setEAttachment] = useState<File | null>(null);
+  const [eLinkedIncomeId, setELinkedIncomeId] = useState('');
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => { loadData(); }, []);
