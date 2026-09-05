@@ -562,6 +562,23 @@ export default function FinancialPersonal() {
                 <SelectContent><SelectItem value="pending">Pendente</SelectItem><SelectItem value="paid">Pago</SelectItem></SelectContent>
               </Select>
             </div>
+            <div>
+              <Label>Vincular à receita (opcional)</Label>
+              <Select value={eLinkedIncomeId || '__none__'} onValueChange={(v) => setELinkedIncomeId(v === '__none__' ? '' : v)}>
+                <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="__none__">Nenhuma</SelectItem>
+                  {(incomes as any[]).filter(i => !i.parent_income_id).map(i => (
+                    <SelectItem key={i.id} value={i.id}>
+                      {i.description} — {fmt(Number(i.amount))} ({new Date(i.due_date).toLocaleDateString('pt-BR')})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Despesas vinculadas são descontadas do líquido daquela receita.
+              </p>
+            </div>
             <div><Label>Comprovante</Label><Input type="file" onChange={e => setEAttachment(e.target.files?.[0] ?? null)} accept="image/*,.pdf" /></div>
             <div><Label>Observações</Label><Textarea value={eNotes} onChange={e => setENotes(e.target.value)} rows={2} /></div>
             <Button className="w-full" onClick={saveExpense} disabled={!eDesc || !eDate || uploading}>
