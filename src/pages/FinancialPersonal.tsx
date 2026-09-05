@@ -160,10 +160,17 @@ export default function FinancialPersonal() {
     return occ.status;
   };
 
+  /** Despesas vinculadas a cada receita PF. */
+  const linkedByIncome = useMemo(
+    () => sumLinkedExpenses(expenses as any[], 'linked_income_id'),
+    [expenses]
+  );
+
   const monthStats = useMemo(() => {
-    let incRecebido = 0, incPrevisto = 0, expPagas = 0, expPrevistas = 0;
+    let incRecebido = 0, incPrevisto = 0, expPagas = 0, expPrevistas = 0, impostos = 0;
     for (const o of monthIncomeOccs) {
       const v = Number(o.item.amount) || 0;
+      impostos += taxAmount(v, (o.item as any).tax_percent);
       if (resolveStatus(o) === 'paid') incRecebido += v;
       else incPrevisto += v;
     }
@@ -172,10 +179,12 @@ export default function FinancialPersonal() {
       if (resolveStatus(o) === 'paid') expPagas += v;
       else expPrevistas += v;
     }
+    const saldoPrevisto = (incRecebido + incPrevisto) - (expPagas + expPrevistas);
     return {
-      incRecebido, incPrevisto, expPagas, expPrevistas,
+      incRecebido, incPrevisto, expPagas, expPrevistas, impostos,
       saldoReal: incRecebido - expPagas,
-      saldoPrevisto: (incRecebido + incPrevisto) - (expPagas + expPrevistas),
+      saldoPrevisto,
+      saldoLiquido: saldoPrevisto - impostos,
     };
   }, [monthIncomeOccs, monthExpenseOccs]);
 
