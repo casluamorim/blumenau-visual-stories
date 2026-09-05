@@ -740,6 +740,8 @@ export default function Financial() {
                         <TableHead>Título</TableHead>
                         <TableHead>Cliente</TableHead>
                         <TableHead>Valor</TableHead>
+                        <TableHead>Imposto</TableHead>
+                        <TableHead>Líquido</TableHead>
                         <TableHead>Vencimento</TableHead>
                         <TableHead>Tipo</TableHead>
                         <TableHead>Status</TableHead>
