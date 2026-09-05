@@ -1157,6 +1157,25 @@ export default function Financial() {
               </div>
             </div>
             <div>
+              <Label>Vincular à receita (opcional)</Label>
+              <Select value={eLinkedInvoiceId || '__none__'} onValueChange={(v) => setELinkedInvoiceId(v === '__none__' ? '' : v)}>
+                <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="__none__">Nenhuma</SelectItem>
+                  {(pjInvoices as any[])
+                    .filter(inv => !inv.parent_invoice_id && (!eClientId || inv.client_id === eClientId))
+                    .map(inv => (
+                      <SelectItem key={inv.id} value={inv.id}>
+                        {inv.title} — {fmt(Number(inv.amount))} ({new Date(inv.due_date).toLocaleDateString('pt-BR')})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Despesas vinculadas são descontadas do líquido daquela receita.
+              </p>
+            </div>
+            <div>
               <Label>Status</Label>
               <Select value={eStatus} onValueChange={setEStatus}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
