@@ -903,6 +903,11 @@ export default function Financial() {
                                     <Paperclip className="h-3 w-3 text-muted-foreground" />
                                   </a>
                                 )}
+                                {exp.linked_invoice_id && (
+                                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[10px]">
+                                    {(pjInvoices as any[]).find(i => i.id === exp.linked_invoice_id)?.title ?? 'Vinculada'}
+                                  </Badge>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell><InlineCategorySelect table="expenses" id={exp.id} value={exp.category} disabled={occ.virtual} onSaved={loadData} /></TableCell>
