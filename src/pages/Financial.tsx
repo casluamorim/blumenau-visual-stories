@@ -670,6 +670,18 @@ export default function Financial() {
               <p className="text-xs text-muted-foreground mt-1">Receita - despesa do mês</p>
             </CardContent>
           </Card>
+          <Card className="card-premium">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Lucro líquido</CardTitle>
+              <DollarSign className={`h-5 w-5 ${monthStats.lucroLiquido >= 0 ? 'text-emerald-400' : 'text-destructive'}`} />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${monthStats.lucroLiquido >= 0 ? 'text-emerald-400' : 'text-destructive'}`}>
+                {fmt(monthStats.lucroLiquido)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Já com {fmt(monthStats.impostos)} de imposto</p>
+            </CardContent>
+          </Card>
         </div>
 
 
@@ -728,6 +740,8 @@ export default function Financial() {
                         <TableHead>Título</TableHead>
                         <TableHead>Cliente</TableHead>
                         <TableHead>Valor</TableHead>
+                        <TableHead>Imposto</TableHead>
+                        <TableHead>Líquido</TableHead>
                         <TableHead>Vencimento</TableHead>
                         <TableHead>Tipo</TableHead>
                         <TableHead>Status</TableHead>
@@ -755,6 +769,20 @@ export default function Financial() {
                             <TableCell>{clientDisplay(inv.clients)}</TableCell>
                             <TableCell className="font-medium text-foreground">
                               <InlineEdit table="invoices" id={inv.id} field="amount" value={inv.amount} type="number" disabled={occ.virtual} format={(v) => fmt(Number(v))} onSaved={loadData} />
+                            </TableCell>
+                            <TableCell className="text-destructive text-xs whitespace-nowrap">
+                              <InlineEdit table="invoices" id={inv.id} field="tax_percent" value={inv.tax_percent ?? 0} type="number"
+                                disabled={occ.virtual}
+                                display={`${Number(inv.tax_percent ?? 0).toLocaleString('pt-BR')}% • ${fmt(taxAmount(inv.amount, inv.tax_percent))}`}
+                                onSaved={loadData} />
+                            </TableCell>
+                            <TableCell className="font-medium text-emerald-400 whitespace-nowrap">
+                              {fmt(netRevenue(inv.amount, inv.tax_percent, linkedByInvoice.get(inv.id) ?? 0))}
+                              {(linkedByInvoice.get(inv.id) ?? 0) > 0 && (
+                                <div className="text-[10px] text-muted-foreground font-normal">
+                                  −{fmt(linkedByInvoice.get(inv.id) ?? 0)} em despesas
+                                </div>
+                              )}
                             </TableCell>
                             <TableCell className="text-muted-foreground">
                               <InlineEdit table="invoices" id={inv.id} field="due_date" value={inv.due_date} type="date" disabled={occ.virtual} format={(v) => v ? new Date(v).toLocaleDateString('pt-BR') : '—'} display={new Date(occ.occurrence_date).toLocaleDateString('pt-BR')} onSaved={loadData} />
@@ -874,6 +902,11 @@ export default function Financial() {
                                   <a href={exp.attachment_url} target="_blank" rel="noopener noreferrer">
                                     <Paperclip className="h-3 w-3 text-muted-foreground" />
                                   </a>
+                                )}
+                                {exp.linked_invoice_id && (
+                                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[10px]">
+                                    {(pjInvoices as any[]).find(i => i.id === exp.linked_invoice_id)?.title ?? 'Vinculada'}
+                                  </Badge>
                                 )}
                               </div>
                             </TableCell>
@@ -1034,6 +1067,38 @@ export default function Financial() {
                 </Select>
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Imposto (%)</Label>
+                <Input type="number" step="0.01" min="0" value={iTaxPercent}
+                  onChange={e => setITaxPercent(e.target.value)} placeholder="Ex: 6" />
+              </div>
+              <div>
+                <Label>Conta de faturamento</Label>
+                <Select value={iAsaasAccount || '1'} onValueChange={(v) => {
+                  setIAsaasAccount(v);
+                  setICnpj((accounts as any)[`asaas_account_${v}_cnpj`] ?? iCnpj);
+                }}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">{accountLabel('1')}</SelectItem>
+                    <SelectItem value="2">{accountLabel('2')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label>CNPJ / CPF da nota</Label>
+              <Input value={iCnpj} onChange={e => setICnpj(e.target.value)} placeholder="CNPJ usado nesta fatura" />
+            </div>
+            {iAmount > 0 && (
+              <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs space-y-1">
+                <div className="flex justify-between"><span className="text-muted-foreground">Imposto</span>
+                  <span className="text-destructive">{fmt(taxAmount(iAmount, iTaxPercent))}</span></div>
+                <div className="flex justify-between font-semibold"><span>Líquido (sem despesas)</span>
+                  <span className="text-emerald-400">{fmt(netRevenue(iAmount, iTaxPercent))}</span></div>
+              </div>
+            )}
             <div>
               <Label>Observações</Label>
               <Textarea value={iNotes} onChange={e => setINotes(e.target.value)} rows={2} />
@@ -1123,6 +1188,25 @@ export default function Financial() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div>
+              <Label>Vincular à receita (opcional)</Label>
+              <Select value={eLinkedInvoiceId || '__none__'} onValueChange={(v) => setELinkedInvoiceId(v === '__none__' ? '' : v)}>
+                <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="__none__">Nenhuma</SelectItem>
+                  {(pjInvoices as any[])
+                    .filter(inv => !inv.parent_invoice_id && (!eClientId || inv.client_id === eClientId))
+                    .map(inv => (
+                      <SelectItem key={inv.id} value={inv.id}>
+                        {inv.title} — {fmt(Number(inv.amount))} ({new Date(inv.due_date).toLocaleDateString('pt-BR')})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Despesas vinculadas são descontadas do líquido daquela receita.
+              </p>
             </div>
             <div>
               <Label>Status</Label>
