@@ -214,13 +214,14 @@ export default function FinancialPersonal() {
   // Income CRUD
   function openNewIncome() {
     setEditingIncome(null); setIDesc(''); setIAmt(0); setICat(''); setIDate('');
-    setIStatus('pending'); setIRec('one_time'); setIRecDay(''); setIRecEnd(''); setINotes('');
+    setIStatus('pending'); setIRec('one_time'); setIRecDay(''); setIRecEnd(''); setINotes(''); setITax('');
     setShowIncomeDialog(true);
   }
   function openEditIncome(inc: PFIncome) {
     setEditingIncome(inc); setIDesc(inc.description); setIAmt(inc.amount); setICat(inc.category ?? '');
     setIDate(inc.due_date); setIStatus(inc.status); setIRec(inc.recurrence);
     setIRecDay(inc.recurrence_day?.toString() ?? ''); setIRecEnd(inc.recurrence_end ?? ''); setINotes(inc.notes ?? '');
+    setITax((inc as any).tax_percent != null ? String((inc as any).tax_percent) : '');
     setShowIncomeDialog(true);
   }
   async function saveIncome() {
@@ -229,6 +230,7 @@ export default function FinancialPersonal() {
       status: iStatus as any, recurrence: iRec as any,
       recurrence_day: iRecDay ? parseInt(iRecDay) : null,
       recurrence_end: iRecEnd || null, notes: iNotes || null, created_by: user?.id,
+      tax_percent: iTax ? Number(String(iTax).replace(',', '.')) : 0,
     };
     if (editingIncome) {
       await supabase.from('personal_income').update(payload).eq('id', editingIncome.id);
@@ -251,14 +253,14 @@ export default function FinancialPersonal() {
   // Expense CRUD
   function openNewExpense() {
     setEditingExpense(null); setEDesc(''); setEAmt(0); setECat(''); setEDate('');
-    setEStatus('pending'); setERec('one_time'); setERecDay(''); setERecEnd(''); setENotes(''); setEAttachment(null);
+    setEStatus('pending'); setERec('one_time'); setERecDay(''); setERecEnd(''); setENotes(''); setEAttachment(null); setELinkedIncomeId('');
     setShowExpenseDialog(true);
   }
   function openEditExpense(exp: PFExpense) {
     setEditingExpense(exp); setEDesc(exp.description); setEAmt(exp.amount); setECat(exp.category ?? '');
     setEDate(exp.due_date); setEStatus(exp.status); setERec(exp.recurrence);
     setERecDay(exp.recurrence_day?.toString() ?? ''); setERecEnd(exp.recurrence_end ?? ''); setENotes(exp.notes ?? '');
-    setEAttachment(null);
+    setEAttachment(null); setELinkedIncomeId((exp as any).linked_income_id ?? '');
     setShowExpenseDialog(true);
   }
   async function saveExpense() {
@@ -276,6 +278,7 @@ export default function FinancialPersonal() {
       due_date: eDate, status: eStatus as any, recurrence: eRec as any,
       recurrence_day: eRecDay ? parseInt(eRecDay) : null, recurrence_end: eRecEnd || null,
       notes: eNotes || null, attachment_url: attachmentUrl, created_by: user?.id,
+      linked_income_id: eLinkedIncomeId || null,
     };
     if (editingExpense) {
       await supabase.from('expenses').update(payload).eq('id', editingExpense.id);
@@ -327,6 +330,8 @@ export default function FinancialPersonal() {
                   <TableHead>Descrição</TableHead>
                   <TableHead>Categoria</TableHead>
                   <TableHead>Valor</TableHead>
+                  {isIncome && <TableHead>Imposto</TableHead>}
+                  {isIncome && <TableHead>Líquido</TableHead>}
                   <TableHead>Data</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Status</TableHead>
@@ -349,12 +354,35 @@ export default function FinancialPersonal() {
                             </Badge>
                           )}
                           {r.attachment_url && <a href={r.attachment_url} target="_blank"><Paperclip className="h-3 w-3 text-muted-foreground" /></a>}
+                          {!isIncome && r.linked_income_id && (
+                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[10px]">
+                              {(incomes as any[]).find(i => i.id === r.linked_income_id)?.description ?? 'Vinculada'}
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell><InlineCategorySelect table={isIncome ? 'personal_income' : 'expenses'} id={r.id} value={r.category} disabled={occ.virtual} onSaved={loadData} /></TableCell>
                       <TableCell className={`font-medium ${isIncome ? 'text-emerald-400' : 'text-destructive'}`}>
                         <InlineEdit table={isIncome ? 'personal_income' : 'expenses'} id={r.id} field="amount" value={r.amount} type="number" disabled={occ.virtual} format={(v) => fmt(Number(v))} onSaved={loadData} />
                       </TableCell>
+                      {isIncome && (
+                        <TableCell className="text-destructive text-xs whitespace-nowrap">
+                          <InlineEdit table="personal_income" id={r.id} field="tax_percent" value={r.tax_percent ?? 0} type="number"
+                            disabled={occ.virtual}
+                            display={`${Number(r.tax_percent ?? 0).toLocaleString('pt-BR')}% • ${fmt(taxAmount(r.amount, r.tax_percent))}`}
+                            onSaved={loadData} />
+                        </TableCell>
+                      )}
+                      {isIncome && (
+                        <TableCell className="font-medium text-emerald-400 whitespace-nowrap">
+                          {fmt(netRevenue(r.amount, r.tax_percent, linkedByIncome.get(r.id) ?? 0))}
+                          {(linkedByIncome.get(r.id) ?? 0) > 0 && (
+                            <div className="text-[10px] text-muted-foreground font-normal">
+                              −{fmt(linkedByIncome.get(r.id) ?? 0)} em despesas
+                            </div>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell className="text-muted-foreground">
                         <InlineEdit table={isIncome ? 'personal_income' : 'expenses'} id={r.id} field="due_date" value={r.due_date} type="date" disabled={occ.virtual} format={(v) => v ? new Date(v).toLocaleDateString('pt-BR') : '—'} display={new Date(occ.occurrence_date).toLocaleDateString('pt-BR')} onSaved={loadData} />
                       </TableCell>
@@ -424,7 +452,7 @@ export default function FinancialPersonal() {
           onShowFutureChange={setShowFuture}
         />
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Card className="card-premium">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Receitas recebidas</CardTitle>
@@ -467,6 +495,18 @@ export default function FinancialPersonal() {
                 {fmt(monthStats.saldoPrevisto)}
               </div>
               <p className="text-xs text-muted-foreground mt-1">Considerando pendentes</p>
+            </CardContent>
+          </Card>
+          <Card className="card-premium">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Saldo líquido</CardTitle>
+              <DollarSign className={`h-5 w-5 ${monthStats.saldoLiquido >= 0 ? 'text-emerald-400' : 'text-destructive'}`} />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${monthStats.saldoLiquido >= 0 ? 'text-emerald-400' : 'text-destructive'}`}>
+                {fmt(monthStats.saldoLiquido)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Já com {fmt(monthStats.impostos)} de imposto</p>
             </CardContent>
           </Card>
         </div>
@@ -534,6 +574,15 @@ export default function FinancialPersonal() {
                 <SelectContent><SelectItem value="pending">Pendente</SelectItem><SelectItem value="paid">Pago</SelectItem></SelectContent>
               </Select>
             </div>
+            <div><Label>Imposto (%)</Label><Input type="number" step="0.01" min="0" value={iTax} onChange={e => setITax(e.target.value)} placeholder="Ex: 6" /></div>
+            {iAmt > 0 && (
+              <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs space-y-1">
+                <div className="flex justify-between"><span className="text-muted-foreground">Imposto</span>
+                  <span className="text-destructive">{fmt(taxAmount(iAmt, iTax))}</span></div>
+                <div className="flex justify-between font-semibold"><span>Líquido (sem despesas)</span>
+                  <span className="text-emerald-400">{fmt(netRevenue(iAmt, iTax))}</span></div>
+              </div>
+            )}
             <div><Label>Observações</Label><Textarea value={iNotes} onChange={e => setINotes(e.target.value)} rows={2} /></div>
             <Button className="w-full" onClick={saveIncome} disabled={!iDesc || !iDate}>{editingIncome ? 'Salvar' : 'Criar Receita'}</Button>
           </div>
