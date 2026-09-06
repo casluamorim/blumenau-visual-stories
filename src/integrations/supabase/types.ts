@@ -813,6 +813,50 @@ export type Database = {
           },
         ]
       }
+      invoice_costs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          invoice_id: string
+          kind: string
+          mode: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description: string
+          id?: string
+          invoice_id: string
+          kind?: string
+          mode?: string
+          updated_at?: string
+          value?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          invoice_id?: string
+          kind?: string
+          mode?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_costs_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_tags: {
         Row: {
           invoice_id: string
@@ -854,6 +898,8 @@ export type Database = {
           due_date: string
           financial_type: Database["public"]["Enums"]["financial_type"]
           id: string
+          installment_number: number | null
+          installment_total: number | null
           is_recurring_active: boolean
           notes: string | null
           paid_at: string | null
@@ -879,6 +925,8 @@ export type Database = {
           due_date: string
           financial_type?: Database["public"]["Enums"]["financial_type"]
           id?: string
+          installment_number?: number | null
+          installment_total?: number | null
           is_recurring_active?: boolean
           notes?: string | null
           paid_at?: string | null
@@ -904,6 +952,8 @@ export type Database = {
           due_date?: string
           financial_type?: Database["public"]["Enums"]["financial_type"]
           id?: string
+          installment_number?: number | null
+          installment_total?: number | null
           is_recurring_active?: boolean
           notes?: string | null
           paid_at?: string | null
@@ -1447,8 +1497,11 @@ export type Database = {
           client_id: string
           created_at: string
           created_by: string | null
+          first_due_date: string | null
           id: string
+          installments: number | null
           notes: string | null
+          payment_plan: string
           services: Json
           status: Database["public"]["Enums"]["quote_status"]
           title: string
@@ -1460,8 +1513,11 @@ export type Database = {
           client_id: string
           created_at?: string
           created_by?: string | null
+          first_due_date?: string | null
           id?: string
+          installments?: number | null
           notes?: string | null
+          payment_plan?: string
           services?: Json
           status?: Database["public"]["Enums"]["quote_status"]
           title: string
@@ -1473,8 +1529,11 @@ export type Database = {
           client_id?: string
           created_at?: string
           created_by?: string | null
+          first_due_date?: string | null
           id?: string
+          installments?: number | null
           notes?: string | null
+          payment_plan?: string
           services?: Json
           status?: Database["public"]["Enums"]["quote_status"]
           title?: string
