@@ -34,6 +34,8 @@ import {
 import { format, parseISO } from 'date-fns';
 import { useCachedState, hasPageCache } from '@/hooks/useCachedState';
 import { netRevenue, sumLinkedExpenses, taxAmount } from '@/lib/netRevenue';
+import { InvoiceCostsEditor } from '@/components/finance/InvoiceCostsEditor';
+import { loadInvoiceCosts, saveInvoiceCosts, sumCostsByInvoice, totalCosts, type InvoiceCost } from '@/lib/invoiceCosts';
 
 // Types
 interface Quote {
@@ -198,6 +200,8 @@ export default function Financial() {
   const [iTaxPercent, setITaxPercent] = useState('');
   const [iCnpj, setICnpj] = useState('');
   const [iAsaasAccount, setIAsaasAccount] = useState('');
+  const [iCosts, setICosts] = useState<InvoiceCost[]>([]);
+  const [allCosts, setAllCosts] = useState<(InvoiceCost & { invoice_id: string })[]>([]);
 
   // Expense form
   const [eDescription, setEDescription] = useState('');
@@ -239,6 +243,8 @@ export default function Financial() {
       supabase.from('projects').select('id, name, client_id').order('name'),
       supabase.from('expenses').select('*, clients(name, company), projects(name)').eq('financial_type', 'pj').order('created_at', { ascending: false }),
     ]);
+    const { data: costsData } = await supabase.from('invoice_costs').select('id, invoice_id, description, kind, mode, value');
+    setAllCosts(((costsData as any[]) ?? []) as any);
     setQuotes((q.data as any) ?? []);
     const invoiceData = (i.data as any) ?? [];
     // Auto-update overdue invoices
@@ -316,7 +322,7 @@ export default function Financial() {
     setIAmount(0); setIDueDate(''); setIStatus('pending');
     setIPaymentMethod(''); setINotes('');
     setIRecurrence('one_time'); setIRecurrenceDay(''); setIRecurrenceEnd(''); setIProjectId('');
-    setITaxPercent(''); setICnpj(''); setIAsaasAccount('');
+    setITaxPercent(''); setICnpj(''); setIAsaasAccount(''); setICosts([]);
     setShowInvoiceDialog(true);
   }
 
@@ -345,6 +351,8 @@ export default function Financial() {
     const acc = inv.asaas_account ?? (String((client as any)?.asaas_account ?? '1') === '2' ? '2' : '1');
     setIAsaasAccount(acc);
     setICnpj(inv.cnpj ?? (client as any)?.billing_cpf_cnpj ?? accounts[`asaas_account_${acc}_cnpj`] ?? '');
+    setICosts([]);
+    loadInvoiceCosts(inv.id).then(setICosts);
     setShowInvoiceDialog(true);
   }
 
@@ -368,10 +376,12 @@ export default function Financial() {
     if (editingInvoice) {
       const { error } = await supabase.from('invoices').update(payload).eq('id', editingInvoice.id);
       if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
+      await saveInvoiceCosts(editingInvoice.id, iCosts, user?.id);
       toast({ title: 'Fatura atualizada!' });
     } else {
-      const { error } = await supabase.from('invoices').insert(payload);
+      const { data: created, error } = await supabase.from('invoices').insert(payload).select('id').single();
       if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
+      if (created?.id) await saveInvoiceCosts(created.id, iCosts, user?.id);
       toast({ title: 'Fatura criada!' });
     }
     setShowInvoiceDialog(false);
@@ -548,12 +558,22 @@ export default function Financial() {
     [expenses]
   );
 
+  /** Custos lançados dentro de cada fatura, em reais. */
+  const costsByInvoice = useMemo(() => {
+    const amounts = new Map<string, number>(invoices.map(i => [i.id, Number(i.amount) || 0]));
+    return sumCostsByInvoice(allCosts, amounts);
+  }, [allCosts, invoices]);
+
+  const deductionsByInvoice = (id: string) =>
+    (linkedByInvoice.get(id) ?? 0) + (costsByInvoice.get(id) ?? 0);
+
   const monthStats = useMemo(() => {
-    let recebido = 0, pendente = 0, atrasado = 0, despPagas = 0, despPrev = 0, impostos = 0;
+    let recebido = 0, pendente = 0, atrasado = 0, despPagas = 0, despPrev = 0, impostos = 0, custosFatura = 0;
     for (const o of monthInvoiceOccs) {
       const st = resolveStatus(o);
       const v = Number(o.item.amount) || 0;
       impostos += taxAmount(v, o.item.tax_percent);
+      custosFatura += costsByInvoice.get(o.item.id) ?? 0;
       if (st === 'paid') recebido += v;
       else if (st === 'overdue') atrasado += v;
       else if (st !== 'cancelled') pendente += v;
@@ -567,12 +587,12 @@ export default function Financial() {
     const receitaPrevista = recebido + pendente + atrasado;
     const despesaPrevista = despPagas + despPrev;
     const lucroPrevisto = receitaPrevista - despesaPrevista;
-    const lucroLiquido = lucroPrevisto - impostos;
+    const lucroLiquido = lucroPrevisto - impostos - custosFatura;
     return {
-      recebido, pendente, atrasado, despPagas, despPrev,
+      recebido, pendente, atrasado, despPagas, despPrev, custosFatura,
       receitaPrevista, despesaPrevista, lucroPrevisto, impostos, lucroLiquido,
     };
-  }, [monthInvoiceOccs, monthExpenseOccs]);
+  }, [monthInvoiceOccs, monthExpenseOccs, costsByInvoice]);
 
   const totalQuotes = quotes
     .filter(q => q.status === 'sent' || q.status === 'draft')
@@ -612,7 +632,7 @@ export default function Financial() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="page-title">Financeiro PJ</h1>
-            <p className="text-muted-foreground">Orçamentos, faturas, despesas e cobranças</p>
+            <p className="text-muted-foreground">Faturas, custos, despesas e cobranças</p>
           </div>
         </div>
 
@@ -679,7 +699,9 @@ export default function Financial() {
               <div className={`text-2xl font-bold ${monthStats.lucroLiquido >= 0 ? 'text-emerald-400' : 'text-destructive'}`}>
                 {fmt(monthStats.lucroLiquido)}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Já com {fmt(monthStats.impostos)} de imposto</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Já com {fmt(monthStats.impostos)} de imposto e {fmt(monthStats.custosFatura)} de custos das faturas
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -691,7 +713,6 @@ export default function Financial() {
             <TabsList className="w-full sm:w-auto overflow-x-auto">
               <TabsTrigger value="invoices">Receitas</TabsTrigger>
               <TabsTrigger value="expenses">Despesas</TabsTrigger>
-              <TabsTrigger value="quotes">Orçamentos</TabsTrigger>
             </TabsList>
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <div className="relative w-full sm:w-56">
@@ -777,7 +798,12 @@ export default function Financial() {
                                 onSaved={loadData} />
                             </TableCell>
                             <TableCell className="font-medium text-emerald-400 whitespace-nowrap">
-                              {fmt(netRevenue(inv.amount, inv.tax_percent, linkedByInvoice.get(inv.id) ?? 0))}
+                              {fmt(netRevenue(inv.amount, inv.tax_percent, deductionsByInvoice(inv.id)))}
+                              {(costsByInvoice.get(inv.id) ?? 0) > 0 && (
+                                <div className="text-[10px] text-muted-foreground font-normal">
+                                  −{fmt(costsByInvoice.get(inv.id) ?? 0)} em custos da fatura
+                                </div>
+                              )}
                               {(linkedByInvoice.get(inv.id) ?? 0) > 0 && (
                                 <div className="text-[10px] text-muted-foreground font-normal">
                                   −{fmt(linkedByInvoice.get(inv.id) ?? 0)} em despesas
@@ -1091,12 +1117,18 @@ export default function Financial() {
               <Label>CNPJ / CPF da nota</Label>
               <Input value={iCnpj} onChange={e => setICnpj(e.target.value)} placeholder="CNPJ usado nesta fatura" />
             </div>
+            <InvoiceCostsEditor gross={iAmount} costs={iCosts} onChange={setICosts} />
             {iAmount > 0 && (
               <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs space-y-1">
+                <div className="flex justify-between"><span className="text-muted-foreground">Valor bruto</span>
+                  <span className="text-foreground">{fmt(iAmount)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Imposto</span>
-                  <span className="text-destructive">{fmt(taxAmount(iAmount, iTaxPercent))}</span></div>
-                <div className="flex justify-between font-semibold"><span>Líquido (sem despesas)</span>
-                  <span className="text-emerald-400">{fmt(netRevenue(iAmount, iTaxPercent))}</span></div>
+                  <span className="text-destructive">−{fmt(taxAmount(iAmount, iTaxPercent))}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Custos do trabalho</span>
+                  <span className="text-destructive">−{fmt(totalCosts(iCosts, iAmount))}</span></div>
+                <div className="flex justify-between font-semibold text-sm pt-1 border-t border-border/60">
+                  <span>Sobra limpo</span>
+                  <span className="text-emerald-400">{fmt(netRevenue(iAmount, iTaxPercent, totalCosts(iCosts, iAmount)))}</span></div>
               </div>
             )}
             <div>

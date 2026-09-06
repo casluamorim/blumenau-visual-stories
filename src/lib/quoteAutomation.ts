@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { buildInstallments, type PaymentPlan } from '@/lib/paymentPlans';
 
 export interface QuoteLike {
   id: string;
@@ -115,4 +116,41 @@ export async function completeProject(projectId: string, userId?: string) {
     user_id: userId ?? null,
     message: 'Projeto finalizado em Meu Trabalho.',
   } as any);
+}
+
+/** Gera uma fatura por parcela conforme a forma de pagamento escolhida na proposta. */
+export async function createInvoicesFromPlan(args: {
+  clientId: string;
+  projectId?: string | null;
+  quoteId?: string | null;
+  title: string;
+  amount: number;
+  plan: PaymentPlan;
+  firstDueDate: string;
+  installments?: number | null;
+  taxPercent?: number | null;
+  cnpj?: string | null;
+  asaasAccount?: string | null;
+  userId?: string;
+}) {
+  const parcels = buildInstallments(args.plan, args.amount, args.firstDueDate, args.installments);
+  const rows = parcels.map((p) => ({
+    client_id: args.clientId,
+    project_id: args.projectId ?? null,
+    quote_id: args.quoteId ?? null,
+    title: parcels.length > 1 ? `${args.title} (${p.number}/${p.total})` : args.title,
+    amount: p.amount,
+    due_date: p.dueDate,
+    status: 'pending' as any,
+    financial_type: 'pj' as any,
+    recurrence: 'one_time' as any,
+    installment_number: p.number,
+    installment_total: p.total,
+    tax_percent: Number(args.taxPercent) || 0,
+    cnpj: args.cnpj ?? null,
+    asaas_account: args.asaasAccount ?? null,
+    created_by: args.userId ?? null,
+  }));
+  const { error } = await supabase.from('invoices').insert(rows as any);
+  return { error, count: rows.length };
 }
