@@ -16,7 +16,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { InlineEdit } from '@/components/InlineEdit';
 import { ClientCombobox, ComboClient } from '@/components/clients/ClientCombobox';
 import { useUrlState } from '@/hooks/usePersistedState';
-import { createProjectFromQuote, createReceivableForProject, type CreatedProject } from '@/lib/quoteAutomation';
+import { createProjectFromQuote, createInvoicesFromPlan, type CreatedProject } from '@/lib/quoteAutomation';
+import { buildInstallments, paymentPlanLabels, defaultInstallments, planSummary, type PaymentPlan } from '@/lib/paymentPlans';
 import { PaymentScheduleDialog } from '@/components/finance/ProjectPaymentDialogs';
 import {
   Plus, FileText, Receipt, Trash2, Edit, AlertTriangle, CheckCircle, Clock, XCircle, Search, ThumbsUp,
@@ -32,6 +33,9 @@ interface Quote {
   valid_until: string | null;
   status: string;
   created_at: string;
+  payment_plan?: string | null;
+  installments?: number | null;
+  first_due_date?: string | null;
   clients?: { name: string; company: string | null; phone: string | null };
 }
 
@@ -72,10 +76,14 @@ export default function Quotes() {
   const [qNotes, setQNotes] = useState('');
   const [qValidUntil, setQValidUntil] = useState('');
   const [qStatus, setQStatus] = useState('draft');
+  const [qPlan, setQPlan] = useState<PaymentPlan>('total');
+  const [qInstallments, setQInstallments] = useState('1');
 
   // Gerar fatura
   const [invoiceFor, setInvoiceFor] = useState<Quote | null>(null);
   const [invDueDate, setInvDueDate] = useState('');
+  const [invPlan, setInvPlan] = useState<PaymentPlan>('total');
+  const [invInstallments, setInvInstallments] = useState('1');
 
   // Automação: proposta aceita → projeto + decisão de pagamento
   const [pendingProject, setPendingProject] = useState<CreatedProject | null>(null);
@@ -95,6 +103,7 @@ export default function Quotes() {
     setEditing(null);
     setQClientId(''); setQTitle(''); setQServices([{ name: '', value: 0 }]);
     setQNotes(''); setQValidUntil(''); setQStatus('draft');
+    setQPlan('total'); setQInstallments('1');
     setShowDialog(true);
   }
 
@@ -103,6 +112,9 @@ export default function Quotes() {
     setQClientId(q.client_id); setQTitle(q.title);
     setQServices(Array.isArray(q.services) && q.services.length ? q.services : [{ name: '', value: 0 }]);
     setQNotes(q.notes ?? ''); setQValidUntil(q.valid_until ?? ''); setQStatus(q.status);
+    const plan = (q.payment_plan as PaymentPlan) ?? 'total';
+    setQPlan(plan);
+    setQInstallments(String(q.installments ?? defaultInstallments(plan)));
     setShowDialog(true);
   }
 
@@ -112,6 +124,8 @@ export default function Quotes() {
     const payload: any = {
       client_id: qClientId, title: qTitle, services: services as any, total_value: total,
       notes: qNotes || null, valid_until: qValidUntil || null, status: qStatus as any,
+      payment_plan: qPlan,
+      installments: qPlan === 'total' ? 1 : qPlan === '50_50' ? 2 : Math.max(1, Number(qInstallments) || defaultInstallments(qPlan)),
       created_by: user?.id,
     };
     const { data: saved, error } = editing
@@ -189,19 +203,23 @@ export default function Quotes() {
 
   async function generateInvoice() {
     if (!invoiceFor || !invDueDate) return;
-    const { error } = await supabase.from('invoices').insert({
-      client_id: invoiceFor.client_id,
-      quote_id: invoiceFor.id,
+    const plan = invPlan;
+    const { data: client } = await supabase.from('clients')
+      .select('asaas_account, billing_cpf_cnpj').eq('id', invoiceFor.client_id).maybeSingle();
+    const { error, count } = await createInvoicesFromPlan({
+      clientId: invoiceFor.client_id,
+      quoteId: invoiceFor.id,
       title: `Fatura - ${invoiceFor.title}`,
-      amount: invoiceFor.total_value,
-      due_date: invDueDate,
-      status: 'pending' as any,
-      financial_type: 'pj' as any,
-      recurrence: 'one_time' as any,
-      created_by: user?.id,
-    } as any);
+      amount: Number(invoiceFor.total_value),
+      plan,
+      firstDueDate: invDueDate,
+      installments: Number(invInstallments) || null,
+      cnpj: (client as any)?.billing_cpf_cnpj ?? null,
+      asaasAccount: (client as any)?.asaas_account ?? null,
+      userId: user?.id,
+    });
     if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); return; }
-    toast({ title: 'Fatura gerada no Financeiro PJ!' });
+    toast({ title: count > 1 ? `${count} faturas geradas no Financeiro PJ!` : 'Fatura gerada no Financeiro PJ!' });
     setInvoiceFor(null); setInvDueDate('');
   }
 
@@ -314,7 +332,12 @@ export default function Quotes() {
                       <div className="flex gap-1">
                         {q.status === 'accepted' && (
                           <Button variant="ghost" size="icon" title="Gerar fatura"
-                            onClick={() => { setInvoiceFor(q); setInvDueDate(''); }}>
+                            onClick={() => {
+                              setInvoiceFor(q); setInvDueDate('');
+                              const plan = ((q.payment_plan as PaymentPlan) ?? 'total');
+                              setInvPlan(plan);
+                              setInvInstallments(String(q.installments ?? defaultInstallments(plan)));
+                            }}>
                             <Receipt className="h-4 w-4 text-emerald-500" />
                           </Button>
                         )}
@@ -406,6 +429,33 @@ export default function Quotes() {
                 </Select>
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Forma de pagamento</Label>
+                <Select value={qPlan} onValueChange={(v) => {
+                  const plan = v as PaymentPlan;
+                  setQPlan(plan);
+                  setQInstallments(String(defaultInstallments(plan)));
+                }}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(paymentPlanLabels) as PaymentPlan[]).map(k => (
+                      <SelectItem key={k} value={k}>{paymentPlanLabels[k]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {(qPlan === 'weekly' || qPlan === 'monthly') && (
+                <div>
+                  <Label>Quantas parcelas</Label>
+                  <Input type="number" min="1" value={qInstallments}
+                    onChange={e => setQInstallments(e.target.value)} />
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground -mt-2">
+              Ao gerar as faturas: {planSummary(qPlan, qServices.reduce((a, s) => a + Number(s.value || 0), 0), Number(qInstallments))}
+            </p>
             <div>
               <Label>Observações</Label>
               <Textarea value={qNotes} onChange={e => setQNotes(e.target.value)} rows={2} />
@@ -426,9 +476,41 @@ export default function Quotes() {
               {invoiceFor?.title} — {fmt(Number(invoiceFor?.total_value ?? 0))}
             </p>
             <div>
-              <Label>Vencimento</Label>
+              <Label>Forma de pagamento</Label>
+              <Select value={invPlan} onValueChange={(v) => {
+                const plan = v as PaymentPlan;
+                setInvPlan(plan);
+                setInvInstallments(String(defaultInstallments(plan)));
+              }}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(paymentPlanLabels) as PaymentPlan[]).map(k => (
+                    <SelectItem key={k} value={k}>{paymentPlanLabels[k]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {(invPlan === 'weekly' || invPlan === 'monthly') && (
+              <div>
+                <Label>Quantas parcelas</Label>
+                <Input type="number" min="1" value={invInstallments}
+                  onChange={e => setInvInstallments(e.target.value)} />
+              </div>
+            )}
+            <div>
+              <Label>{invPlan === 'total' ? 'Vencimento' : 'Vencimento da 1ª parcela'}</Label>
               <Input type="date" value={invDueDate} onChange={e => setInvDueDate(e.target.value)} />
             </div>
+            {invDueDate && (
+              <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs space-y-1 max-h-40 overflow-y-auto">
+                {buildInstallments(invPlan, Number(invoiceFor?.total_value ?? 0), invDueDate, Number(invInstallments)).map(p => (
+                  <div key={p.number} className="flex justify-between">
+                    <span className="text-muted-foreground">Parcela {p.number}/{p.total}</span>
+                    <span className="text-foreground">{fmt(p.amount)} • {new Date(p.dueDate + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <Button className="w-full" onClick={generateInvoice} disabled={!invDueDate}>
               <Receipt className="mr-2 h-4 w-4" /> Criar fatura no Financeiro PJ
             </Button>
